@@ -6,13 +6,17 @@
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
 
+// 🔗 Where Supabase should send users after email-confirm
+// (matches your Netlify site; adjust if you renamed the domain)
+const EMAIL_REDIRECT_URL = "https://civicchatter.netlify.app/auth-callback.html";
+
 function assertSDK() {
-  if (!window._sdkLoaded || !window.supabase) {
+  if (!window.supabase) {
     alert("Supabase SDK did not load. Check connectivity/CDN.");
     throw new Error("Supabase SDK missing");
   }
 }
-assertSDK(); // will throw early if SDK missing
+assertSDK();
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -94,6 +98,13 @@ async function router() {
 
   const hash = location.hash || "#/login";
 
+  // Allow hash-based callback if you ever link to #/auth-callback
+  if (hash.startsWith("#/auth-callback")) {
+    const { data: { session: s } } = await sb.auth.getSession();
+    location.hash = s ? "#/profile" : "#/login";
+    return;
+  }
+
   if (hash.startsWith("#/u/")) {
     const handle = hash.split("#/u/")[1]?.toLowerCase();
     await showPublicProfile(handle);
@@ -128,13 +139,18 @@ async function signup() {
     if (!(await handleAvailable(handle))) return alert("Handle is taken");
     if (!email || !password) return alert("Email & password required");
 
-    const { data: sign, error: signErr } = await sb.auth.signUp({ email, password });
+    // 🔔 Send the confirmation link to your Netlify callback
+    const { data: sign, error: signErr } = await sb.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: EMAIL_REDIRECT_URL },
+    });
     if (signErr) throw signErr;
 
-    // If email confirmations ON, there may be no session yet.
+    // With confirmations ON, there may be no session until the email link is clicked.
     let session = sign.session || (await ensureSession(email, password));
     if (!session) {
-      alert("Account created. Confirm the email, then sign in.");
+      alert("Account created. Check your email to confirm, then sign in.");
       location.hash = "#/login";
       return;
     }
