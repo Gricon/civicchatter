@@ -1,0 +1,312 @@
+/* =========================
+   Civic Chatter – Base Theme
+   ========================= */
+:root {
+  --primary: #002868;        /* U.S. Flag Blue */
+  --accent: #bf0a30;         /* U.S. Flag Red */
+  --accent-600: #a00;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --text: #0f172a;           /* slate-900-ish */
+  --muted: #64748b;          /* slate-500-ish */
+  --ring: #3b82f6;           /* focus ring blue */
+  --border: #e2e8f0;         /* slate-200 */
+
+  /* layout + rhythm */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,.08);
+  --space-1: .5rem;
+  --space-2: .75rem;
+  --space-3: 1rem;
+  --space-4: 1.25rem;
+  --space-6: 1.5rem;
+}
+
+/* Dark mode (auto) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: #0f172a;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --border: #1f2937;
+    --shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+}
+
+/* =========================
+   Global
+   ========================= */
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.skip-link:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 2px solid var(--ring);
+}
+
+/* =========================
+   Header / Nav
+   ========================= */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* patriotic gradient header */
+  background: linear-gradient(90deg, #002868 0%, #002868 50%, #bf0a30 100%);
+  color: white;
+  padding: var(--space-3);
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+nav a {
+  color: #fff;
+  opacity: .95;
+  text-decoration: none;
+  padding: .25rem .5rem;
+  border-radius: 6px;
+}
+nav a:hover,
+nav a[aria-current="page"] {
+  opacity: 1;
+  background: rgba(255,255,255,.12);
+}
+
+/* =========================
+   Layout
+   ========================= */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-3);
+}
+
+.container {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--space-3);
+}
+
+.card,
+section {
+  width: 100%;
+  max-width: 700px;
+  background: var(--surface);
+  color: var(--text);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: var(--space-3) auto;
+  border: 1px solid var(--border);
+}
+
+/* =========================
+   Forms & Inputs
+   ========================= */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+  font-size: .95rem;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  margin: 0;
+  padding: .75rem .85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 25%, transparent);
+}
+
+/* Field states */
+.input-error {
+  border-color: var(--accent) !important;
+}
+.help {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+button {
+  width: 100%;
+  margin: var(--space-1) 0;
+  padding: .75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  /* patriotic red gradient */
+  background: linear-gradient(180deg, var(--accent) 0%, #a10 100%);
+  color: white;
+  cursor: pointer;
+  transition: transform .02s ease, box-shadow .2s ease, background .2s ease;
+}
+button:hover { background: var(--accent-600); }
+button:active { transform: translateY(1px); }
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 35%, transparent);
+}
+
+/* Button variants */
+.button--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.button--ghost:hover {
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+}
+
+.button--primary {
+  background: var(--primary);
+}
+.button--primary:hover {
+  background: #001d4a;
+}
+
+/* =========================
+   Utilities
+   ========================= */
+.hidden { display: none !important; }
+.link {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.link:hover {
+  text-decoration-color: var(--accent);
+}
+
+.row {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+.hint { color: var(--muted); font-size: .9rem; }
+.center { text-align: center; }
+.mt-0 { margin-top: 0; }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mb-0 { margin-bottom: 0; }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-3 { margin-bottom: var(--space-3); }
+
+/* Larger hit area for mobile */
+@media (pointer: coarse) {
+  button, a, input, select { min-height: 44px; }
+}
+
+/* =========================
+   Public Profile
+   ========================= */
+.public-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eee;
+  border: 1px solid var(--border);
+}
+.handle { color: var(--muted); }
+.city { color: var(--text); opacity: .8; }
+
+/* Optional: flag-style divider */
+hr.flag {
+  border: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #002868 0%, #ffffff 50%, #bf0a30 100%);
+  border-radius: 2px;
+  margin: var(--space-3) 0;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+@media (min-width: 700px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .card, section { padding: var(--space-4); }
+}
+
+/* =========================
+   Motion preferences
+   ========================= */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

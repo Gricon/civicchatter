@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Civic Chatter</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#002868" />
+  <!--
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script> 
+  -->
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header>
+    <h1>Civic Chatter</h1>
+    <nav id="nav" class="hidden">
+      <a href="#/profile" class="nav-link">My Profile</a>
+      <a id="my-debate-link" href="#/d/me" class="nav-link">My Debate</a>
+      <a href="#/login" class="nav-link" id="logout-link">Logout</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- Auth / Signup + Login -->
+    <section class="card" id="auth-section">
+      <h2>Create account / Sign in</h2>
+      <div class="grid">
+        <label>
+          Name
+          <input type="text" id="signup-name" placeholder="Your name" />
+        </label>
+        <label>
+          Handle (public @username)
+          <input type="text" id="signup-handle" placeholder="e.g. conrad" />
+          <small class="hint">3+ chars, a–z, 0–9, _ or -</small>
+        </label>
+        <label>
+          Email
+          <input type="email" id="signup-email" placeholder="you@example.com" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="signup-password" placeholder="Your password" />
+        </label>
+        <label>
+          Phone (optional, for SMS requests)
+          <input type="tel" id="signup-phone" placeholder="+63..." />
+        </label>
+        <label class="row" style="margin-top:.25rem">
+          <input type="checkbox" id="signup-private" /> Private account (not searchable)
+        </label>
+      </div>
+      <p class="hint">After login, create your handle and public profile.</p>
+      <div class="row">
+        <button id="btn-signup" class="button--primary">Sign Up</button>
+        <button id="btn-login" class="button--ghost">Sign In</button>
+      </div>
+    </section>
+
+    <!-- Private Profile (owner-only) -->
+    <section class="card hidden" id="private-profile">
+      <h2>My Private Profile</h2>
+      <div class="grid">
+        <label>
+          Handle (public URL)
+          <input type="text" id="pp-handle" placeholder="e.g. conrad" />
+        </label>
+        <label>
+          Display Name
+          <input type="text" id="pp-display-name" placeholder="e.g. Conrad G." />
+        </label>
+        <label>
+          Bio
+          <textarea id="pp-bio" placeholder="Short bio"></textarea>
+        </label>
+        <label>
+          City
+          <input type="text" id="pp-city" placeholder="e.g. Manila" />
+        </label>
+        <label>
+          Avatar URL
+          <input type="url" id="pp-avatar-url" placeholder="https://..." />
+        </label>
+      </div>
+
+      <h3>Private Details (not public)</h3>
+      <div class="grid">
+        <label>
+          Email
+          <input type="email" id="pr-email" placeholder="user@example.com" />
+        </label>
+        <label>
+          Phone
+          <input type="tel" id="pr-phone" placeholder="+63..." />
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="save-profile">Save Profile</button>
+        <a id="public-link" class="link" href="#">View Public Page</a>
+      </div>
+    </section>
+
+    <!-- Public Profile (read-only) -->
+    <section class="card hidden" id="public-profile">
+      <div class="public-header">
+        <img id="pub-avatar" alt="avatar" class="avatar" />
+        <div>
+          <h2 id="pub-display-name"></h2>
+          <p class="handle" id="pub-handle"></p>
+          <p class="city" id="pub-city"></p>
+        </div>
+      </div>
+      <p id="pub-bio"></p>
+    </section>
+
+    <!-- Debate Page -->
+    <section class="card hidden" id="debate-page">
+      <h2 id="deb-title">Debates</h2>
+      <p id="deb-desc" class="hint"></p>
+      <div id="deb-content" style="margin-top:1rem;"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

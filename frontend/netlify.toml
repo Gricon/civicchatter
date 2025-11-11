@@ -1,0 +1,9 @@
+[build]
+  publish = "frontend"     # folder containing your index.html
+  command = ""             # leave empty if no build step (pure HTML/JS)
+
+# Redirect /auth-callback to the static callback page
+[[redirects]]
+  from = "/auth-callback"
+  to = "/auth-callback.html"
+  status = 200

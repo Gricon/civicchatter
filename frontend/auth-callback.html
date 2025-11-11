@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Civic Chatter – Auth</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <p style="font-family:sans-serif">Finishing sign-in…</p>
+  <script>
+    (async () => {
+      const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const hash = new URL(window.location.href).hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+      const code = new URL(window.location.href).searchParams.get("code");
+
+      try {
+        if (access_token && refresh_token) {
+          // Magic-link / token hash flow
+          await sb.auth.setSession({ access_token, refresh_token });
+          window.location.replace("/#/profile");
+        } else if (code && sb.auth.exchangeCodeForSession) {
+          // PKCE code-based flow (Supabase v2)
+          await sb.auth.exchangeCodeForSession({ authCode: code });
+          window.location.replace("/#/profile");
+        } else {
+          window.location.replace("/#/login");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Could not finish sign-in. Please log in manually.");
+        window.location.replace("/#/login");
+      }
+    })();
+  </script>
+</body>
+</html>
