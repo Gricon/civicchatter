@@ -420,9 +420,119 @@ async function loadMyProfile() {
     } catch (e) {
       // non-fatal — not all pages show settings profile
     }
+    // populate small header name/avatar for private profile
+    try {
+      const myNameEl = byId('my-real-name');
+      const myHandleEl = byId('my-handle-small');
+      const myAvatarSmall = byId('my-avatar-small');
+      if (myNameEl) myNameEl.textContent = pubRow?.display_name || pubRow?.handle || 'Your Name';
+      if (myHandleEl) myHandleEl.textContent = pubRow?.handle ? `@${pubRow.handle}` : '';
+      if (myAvatarSmall) myAvatarSmall.src = pubRow?.avatar_url || 'https://via.placeholder.com/48';
+    } catch (e) {}
+
+    // load user's posts into posts-list
+    try {
+      loadMyPosts();
+    } catch (e) {
+      console.warn('Failed to load posts', e);
+    }
   } catch (err) {
     alertActionError("profile load", err);
   }
+}
+
+// Posts: create, upload media, list
+async function handleCreatePost() {
+  try {
+    const user = await requireUser();
+    const text = readValue('post-text');
+    const link = readValue('post-link');
+    const fileEl = byId('post-file');
+    const status = byId('post-status');
+    if (status) status.textContent = 'Posting…';
+
+    let media_url = null;
+    let media_type = null;
+    if (fileEl && fileEl.files && fileEl.files[0]) {
+      const f = fileEl.files[0];
+      const ext = f.type.split('/')[0];
+      media_type = ext; // 'image' or 'video'
+      // upload to 'posts' bucket with filename userId/timestamp_originalname
+      const { data: userData } = await sb.auth.getUser();
+      const userId = userData?.user?.id;
+      const filename = `${userId}/${Date.now()}_${f.name}`;
+      // use simple storage upload (sdk) which may not provide progress here
+      const { error: upErr } = await sb.storage.from('posts').upload(filename, f, { upsert: false });
+      if (upErr) throw upErr;
+      const { data } = sb.storage.from('posts').getPublicUrl(filename);
+      media_url = data?.publicUrl || null;
+    }
+
+    // insert post row (will fail if table not created)
+    const insertRow = {
+      user_id: user.id,
+      content: text || null,
+      media_url: media_url,
+      media_type: media_type,
+      link: link || null,
+    };
+    const { error: insErr } = await sb.from('posts').insert(insertRow);
+    if (insErr) throw insErr;
+
+    if (status) status.textContent = 'Posted';
+    writeValue('post-text', '');
+    writeValue('post-link', '');
+    if (fileEl) fileEl.value = '';
+    // refresh posts
+    await loadMyPosts();
+  } catch (err) {
+    alertActionError('create post', err);
+    const status = byId('post-status'); if (status) status.textContent = '';
+  }
+}
+
+async function loadMyPosts() {
+  try {
+    const { data: userData } = await sb.auth.getUser();
+    const user = userData?.user;
+    if (!user) return;
+    const { data: rows, error } = await sb.from('posts').select('id, content, media_url, media_type, link, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50);
+    if (error) {
+      // if posts table doesn't exist, don't bother
+      console.debug('loadMyPosts: error', error);
+      return;
+    }
+    const list = byId('posts-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!rows || rows.length === 0) {
+      list.innerHTML = '<p class="hint">No posts yet.</p>';
+      return;
+    }
+    rows.forEach((r) => {
+      const item = document.createElement('div');
+      item.className = 'card mt-1';
+      const created = new Date(r.created_at).toLocaleString();
+      let html = `<div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${r.content ? escapeHtml(r.content).slice(0,100) : ''}</div><div class="hint">${created}</div></div>`;
+      if (r.link) html += `<div><a href="${escapeHtml(r.link)}" target="_blank" rel="noopener">${escapeHtml(r.link)}</a></div>`;
+      if (r.media_url) {
+        if (r.media_type === 'video') {
+          html += `<div class="mt-1"><video controls src="${escapeHtml(r.media_url)}" style="max-width:100%;"></video></div>`;
+        } else {
+          html += `<div class="mt-1"><img src="${escapeHtml(r.media_url)}" style="max-width:100%;"/></div>`;
+        }
+      }
+      item.innerHTML = html;
+      list.appendChild(item);
+    });
+  } catch (err) {
+    console.warn('loadMyPosts error', err);
+  }
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 async function handleSaveSettingsProfile() {

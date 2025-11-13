@@ -92,7 +92,19 @@
 
     <!-- PRIVATE PROFILE (Edit Mode) -->
     <section id="private-profile" class="card hidden">
-      <h2>My Profile</h2>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <img id="my-avatar-small" src="https://via.placeholder.com/48" alt="avatar" class="avatar" style="width:48px;height:48px;" />
+          <div>
+            <div id="my-real-name" style="font-weight:600;">Your Name</div>
+            <div class="hint" id="my-handle-small">@yourhandle</div>
+          </div>
+        </div>
+        <div>
+          <button id="go-to-public-profile" class="button--ghost">View public profile</button>
+        </div>
+      </div>
+      <hr />
       <p class="hint">Edit your profile information below.</p>
 
       <div class="grid">
@@ -126,6 +138,30 @@
       </div>
 
       <button id="save-profile" type="button" class="button--primary">Save Profile</button>
+
+      <!-- POSTS composer -->
+      <div class="card mt-2">
+        <h3>Create a post</h3>
+        <label>Write something
+          <textarea id="post-text" rows="3" placeholder="Share an update..."></textarea>
+        </label>
+        <label>Link (optional)
+          <input id="post-link" type="url" placeholder="https://..." />
+        </label>
+        <label>Attach image/video (optional)
+          <input id="post-file" type="file" accept="image/*,video/*" />
+        </label>
+        <div class="row mt-1">
+          <button id="post-create" class="button--primary">Post</button>
+          <span id="post-status" class="hint" style="margin-left:1rem"></span>
+        </div>
+      </div>
+
+      <!-- Posts feed -->
+      <div id="posts-feed" class="mt-2">
+        <h3>Your posts</h3>
+        <div id="posts-list"></div>
+      </div>
 
       <div class="mt-2">
         <a id="public-link" href="#/u/" class="button--ghost" style="display: inline-block; margin-top: 1rem;">View My Public Profile</a>
