@@ -1,9 +1,6 @@
 /* ===========================
-   Civic Chatter — app.js (DEBUG VERSION)
-   Extra console logging to diagnose issues
+   Civic Chatter — app.js
    =========================== */
-
-console.log("🟢 app.js loaded and executing");
 
 // ---- Service Worker Registration ----
 if ("serviceWorker" in navigator) {
@@ -17,16 +14,12 @@ const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
 
-console.log("🔍 Checking for Supabase SDK...");
 if (!window.supabase) {
-  console.error("❌ Supabase SDK missing!");
   alert("Supabase SDK missing (window.supabase is undefined)");
   throw new Error("Supabase SDK missing");
 }
-console.log("✅ Supabase SDK found");
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log("✅ Supabase client created:", sb);
 
 // ---- Helpers ----
 const SECTION_IDS = [
@@ -43,11 +36,7 @@ const formatError = (err) => err?.message || err || "Unknown error";
 
 function byId(id) {
   const el = document.getElementById(id);
-  if (!el) {
-    console.error(`❌ Missing DOM element #${id}`);
-    throw new Error(`Missing DOM element #${id}`);
-  }
-  console.log(`✅ Found element #${id}`);
+  if (!el) throw new Error(`Missing DOM element #${id}`);
   return el;
 }
 
@@ -63,30 +52,20 @@ function writeValue(id, value) {
 }
 
 function showSection(id) {
-  console.log(`📄 Showing section: ${id}`);
   SECTION_IDS.forEach((secId) => {
     const el = document.getElementById(secId);
-    if (!el) {
-      console.warn(`⚠️ Section not found: ${secId}`);
-      return;
-    }
-    if (secId === id) {
-      el.classList.remove("hidden");
-      console.log(`  ✅ Showed ${secId}`);
-    } else {
-      el.classList.add("hidden");
-    }
+    if (!el) return;
+    if (secId === id) el.classList.remove("hidden");
+    else el.classList.add("hidden");
   });
 }
 
 function showNav() {
-  console.log("🧭 Showing navigation");
   const nav = document.getElementById("nav");
   if (nav) nav.classList.remove("hidden");
 }
 
 function hideNav() {
-  console.log("🧭 Hiding navigation");
   const nav = document.getElementById("nav");
   if (nav) nav.classList.add("hidden");
 }
@@ -96,7 +75,7 @@ function isValidHandle(h) {
 }
 
 function handleActionError(action, err) {
-  console.error(`❌ ${action} failed:`, err);
+  console.error(`${action} failed:`, err);
   let userMessage = formatError(err);
 
   if (err?.message?.includes("Password should be at least")) {
@@ -193,16 +172,12 @@ async function createInitialRecords({ userId, handle, name, email, phone, isPriv
 }
 
 async function resolveEmailForLogin(identifier) {
-  console.log("🔍 Resolving email for:", identifier);
-  
   if (!identifier) throw new Error("Missing username or email");
 
   if (identifier.includes("@")) {
-    console.log("✅ Already an email:", identifier);
     return identifier;
   }
 
-  console.log("🔍 Looking up handle in database...");
   const handle = identifier.toLowerCase();
   const { data: pubRow, error: pubErr } = await sb
     .from("profiles_public")
@@ -210,16 +185,8 @@ async function resolveEmailForLogin(identifier) {
     .eq("handle", handle)
     .maybeSingle();
 
-  if (pubErr) {
-    console.error("❌ Database error:", pubErr);
-    throw pubErr;
-  }
-  if (!pubRow?.id) {
-    console.error("❌ Handle not found:", handle);
-    throw new Error("Handle not found");
-  }
-
-  console.log("✅ Found user ID:", pubRow.id);
+  if (pubErr) throw pubErr;
+  if (!pubRow?.id) throw new Error("Handle not found");
 
   const { data: privRow, error: privErr } = await sb
     .from("profiles_private")
@@ -227,70 +194,47 @@ async function resolveEmailForLogin(identifier) {
     .eq("id", pubRow.id)
     .maybeSingle();
 
-  if (privErr) {
-    console.error("❌ Database error:", privErr);
-    throw privErr;
-  }
-  if (!privRow?.email) {
-    console.error("❌ No email found for user");
-    throw new Error("No email on file for this user");
-  }
+  if (privErr) throw privErr;
+  if (!privRow?.email) throw new Error("No email on file for this user");
 
-  console.log("✅ Resolved to email:", privRow.email);
   return privRow.email;
 }
 
 // ---- Navigation helper actions ----
 function showSignup() {
-  console.log("📝 Switching to signup");
   hideNav();
   showSection("signup-section");
 }
 
 function showLogin() {
-  console.log("🔐 Switching to login");
   hideNav();
   showSection("login-section");
 }
 
 function showForgotPassword() {
-  console.log("🔑 Switching to forgot password");
   hideNav();
   showSection("forgot-password-section");
 }
 
 // ---- AUTH: Login ----
 async function ccLogin() {
-  console.log("🔐 LOGIN BUTTON CLICKED!");
-  
   try {
-    console.log("📝 Reading form values...");
     const identifier = readValue("login-username");
     const password = byId("login-password").value;
 
-    console.log("🔍 Username/Email:", identifier ? identifier : "(empty)");
-    console.log("🔍 Password:", password ? "***entered***" : "(empty)");
-
     if (!identifier || !password) {
-      console.warn("⚠️ Missing credentials");
       return alert("Enter username/email and password");
     }
 
-    console.log("🔄 Resolving email...");
     const email = await resolveEmailForLogin(identifier);
-    
-    console.log("🔐 Attempting Supabase login...");
     const { data, error } = await sb.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      console.error("❌ Login error:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log("✅ Sign in successful!", data);
+    console.log("Sign in successful", data);
     alert("Login OK!");
     showNav();
     showSection("private-profile");
@@ -301,18 +245,14 @@ async function ccLogin() {
 
 // ---- AUTH: Signup ----
 async function ccSignup() {
-  console.log("📝 SIGNUP BUTTON CLICKED!");
-  
   try {
     const name = readValue("signup-name");
     const handle = readValue("signup-handle", { lowercase: true });
     const email = readValue("signup-email");
     const phone = readValue("signup-phone");
     const password = byId("signup-password").value;
-    const address = readValue("signup-address");
+    const address = readValue("signup-address"); // not used yet, but can be added to private table later
     const isPrivate = byId("signup-private").checked;
-
-    console.log("📋 Signup data:", { name, handle, email, phone, isPrivate });
 
     if (!name) return alert("Enter your name");
     if (!isValidHandle(handle))
@@ -323,7 +263,6 @@ async function ccSignup() {
 
     await ensureHandleAvailable(handle);
 
-    console.log("🔐 Creating Supabase account...");
     const { data: signData, error: signError } = await sb.auth.signUp({
       email,
       password,
@@ -337,7 +276,6 @@ async function ccSignup() {
       );
     }
 
-    console.log("📝 Creating profile records...");
     await createInitialRecords({
       userId: user.id,
       handle,
@@ -347,7 +285,6 @@ async function ccSignup() {
       isPrivate,
     });
 
-    console.log("✅ Signup complete!");
     alert("Account and pages created successfully!");
     showNav();
     showSection("private-profile");
@@ -358,12 +295,9 @@ async function ccSignup() {
 
 // ---- AUTH: Logout ----
 async function ccLogout() {
-  console.log("👋 LOGOUT CLICKED!");
-  
   try {
     const { error } = await sb.auth.signOut();
     if (error) throw error;
-    console.log("✅ Logged out");
     alert("Logged out successfully");
     hideNav();
     showLogin();
@@ -374,22 +308,16 @@ async function ccLogout() {
 
 // ---- AUTH: Forgot/reset password ----
 async function ccResetPassword() {
-  console.log("🔑 RESET PASSWORD CLICKED!");
-  
   try {
     const email = readValue("forgot-email");
-    console.log("📧 Reset email:", email);
-    
     if (!email) return alert("Enter your email address");
     if (!email.includes("@")) return alert("Enter a valid email address");
 
-    console.log("📤 Sending reset email...");
     const { error } = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password.html`,
     });
     if (error) throw error;
 
-    console.log("✅ Reset email sent");
     alert("Password reset email sent! Check your inbox (and spam folder).");
     writeValue("forgot-email", "");
     showLogin();
@@ -400,11 +328,8 @@ async function ccResetPassword() {
 
 // ---- SETTINGS: Load profile & preferences ----
 async function loadSettings() {
-  console.log("⚙️ Loading settings...");
-  
   try {
     const user = await requireUser();
-    console.log("👤 User ID:", user.id);
 
     // Load public profile
     const { data: pubRow } = await sb
@@ -412,8 +337,6 @@ async function loadSettings() {
       .select("handle, display_name, bio, city, avatar_url, is_private")
       .eq("id", user.id)
       .maybeSingle();
-
-    console.log("📄 Public profile:", pubRow);
 
     if (pubRow) {
       writeValue("settings-name", pubRow.display_name || "");
@@ -434,8 +357,6 @@ async function loadSettings() {
       .select("email, phone, preferred_contact")
       .eq("id", user.id)
       .maybeSingle();
-
-    console.log("🔒 Private profile:", privRow);
 
     if (privRow) {
       writeValue("settings-email", privRow.email || "");
@@ -458,7 +379,6 @@ async function loadSettings() {
 
     applyAppearance(fontSize, theme, bgUrl);
 
-    console.log("✅ Settings loaded");
     showSection("settings-page");
   } catch (err) {
     handleActionError("settings load", err);
@@ -467,8 +387,6 @@ async function loadSettings() {
 
 // ---- SETTINGS: Save profile (top of settings) ----
 async function ccSaveProfileFromSettings() {
-  console.log("💾 Saving profile...");
-  
   try {
     const user = await requireUser();
 
@@ -479,8 +397,6 @@ async function ccSaveProfileFromSettings() {
     const avatarUrl = readValue("settings-avatar-url");
     const email = readValue("settings-email");
     const phone = readValue("settings-phone");
-
-    console.log("📝 Profile data:", { displayName, handle, bio, city, avatarUrl });
 
     if (!isValidHandle(handle)) {
       return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
@@ -511,7 +427,6 @@ async function ccSaveProfileFromSettings() {
     );
     if (privErr) throw privErr;
 
-    console.log("✅ Profile saved");
     alert("Profile saved");
   } catch (err) {
     handleActionError("profile save", err);
@@ -520,14 +435,10 @@ async function ccSaveProfileFromSettings() {
 
 // ---- SETTINGS: Save privacy & contact ----
 async function ccSavePreferences() {
-  console.log("💾 Saving preferences...");
-  
   try {
     const user = await requireUser();
     const privacy = readValue("settings-privacy");
     const contact = readValue("settings-contact");
-
-    console.log("📝 Preferences:", { privacy, contact });
 
     const isPrivate = privacy === "private";
 
@@ -550,7 +461,6 @@ async function ccSavePreferences() {
     );
     if (privErr) throw privErr;
 
-    console.log("✅ Preferences saved");
     alert("Preferences saved");
   } catch (err) {
     handleActionError("preferences save", err);
@@ -559,8 +469,6 @@ async function ccSavePreferences() {
 
 // ---- Appearance helpers ----
 function applyAppearance(fontSize, theme, bgUrl) {
-  console.log("🎨 Applying appearance:", { fontSize, theme, bgUrl });
-  
   const root = document.documentElement;
   const body = document.body;
 
@@ -592,8 +500,6 @@ function applyAppearance(fontSize, theme, bgUrl) {
 }
 
 function ccSaveAppearance() {
-  console.log("💾 Saving appearance...");
-  
   const fontSize = readValue("settings-font-size");
   const theme = readValue("settings-theme");
   const bgUrl = readValue("settings-bg-url");
@@ -603,16 +509,13 @@ function ccSaveAppearance() {
   localStorage.setItem("cc-bg-url", bgUrl);
 
   applyAppearance(fontSize, theme, bgUrl);
-  console.log("✅ Appearance saved");
   alert("Appearance saved");
 }
 
 // ---- SETTINGS: Change password ----
 async function ccSavePassword() {
-  console.log("🔐 Changing password...");
-  
   try {
-    await requireUser();
+    await requireUser(); // just ensure logged in
     const newPass = readValue("settings-new-password");
     const confirmPass = readValue("settings-new-password-confirm");
 
@@ -631,7 +534,6 @@ async function ccSavePassword() {
 
     writeValue("settings-new-password", "");
     writeValue("settings-new-password-confirm", "");
-    console.log("✅ Password updated");
     alert("Password updated");
   } catch (err) {
     handleActionError("password change", err);
@@ -640,8 +542,6 @@ async function ccSavePassword() {
 
 // ---- Public profile view (for your own public page) ----
 async function showPublicProfileView() {
-  console.log("👤 Loading public profile view...");
-  
   try {
     const user = await requireUser();
     const { data: pubRow, error } = await sb
@@ -652,12 +552,9 @@ async function showPublicProfileView() {
 
     if (error) throw error;
     if (!pubRow) {
-      console.warn("⚠️ No public profile found");
       alert("No public profile yet. Fill out your profile in Settings.");
       return loadSettings();
     }
-
-    console.log("📄 Public profile data:", pubRow);
 
     const avatar = document.getElementById("pub-avatar");
     const displayName = document.getElementById("pub-display-name");
@@ -671,7 +568,6 @@ async function showPublicProfileView() {
     if (city) city.textContent = pubRow.city || "";
     if (bio) bio.textContent = pubRow.bio || "No bio yet.";
 
-    console.log("✅ Public profile displayed");
     showSection("public-profile");
   } catch (err) {
     handleActionError("public profile view", err);
@@ -680,8 +576,6 @@ async function showPublicProfileView() {
 
 // ---- Debates view ----
 async function showDebates() {
-  console.log("💬 Loading debates...");
-  
   try {
     const user = await requireUser();
     const { data: row } = await sb
@@ -689,8 +583,6 @@ async function showDebates() {
       .select("title, description")
       .eq("id", user.id)
       .maybeSingle();
-
-    console.log("📄 Debate page data:", row);
 
     const titleEl = document.getElementById("deb-title");
     const descEl = document.getElementById("deb-desc");
@@ -703,7 +595,6 @@ async function showDebates() {
       if (descEl) descEl.textContent = "";
     }
 
-    console.log("✅ Debates page displayed");
     showSection("debate-page");
   } catch (err) {
     handleActionError("debates load", err);
@@ -712,126 +603,111 @@ async function showDebates() {
 
 // ---- Attach all event listeners ----
 function attachEventListeners() {
-  console.log("🔌 Attaching event listeners…");
+  console.log("Attaching event listeners…");
 
-  try {
-    // login
-    console.log("  🔐 Attaching login button...");
-    const loginBtn = byId("btn-login");
-    loginBtn.addEventListener("click", ccLogin);
-    console.log("  ✅ Login button attached");
+  // login
+  byId("btn-login").addEventListener("click", ccLogin);
+  byId("go-signup").addEventListener("click", showSignup);
+  byId("forgot-password-btn").addEventListener("click", showForgotPassword);
 
-    byId("go-signup").addEventListener("click", showSignup);
-    byId("forgot-password-btn").addEventListener("click", showForgotPassword);
+  const loginUsername = byId("login-username");
+  const loginPassword = byId("login-password");
+  loginUsername.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      ccLogin();
+    }
+  });
+  loginPassword.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      ccLogin();
+    }
+  });
 
-    const loginUsername = byId("login-username");
-    const loginPassword = byId("login-password");
-    loginUsername.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        ccLogin();
-      }
+  // forgot password
+  byId("btn-reset-password").addEventListener("click", ccResetPassword);
+  byId("back-to-login").addEventListener("click", showLogin);
+
+  // signup
+  byId("btn-signup").addEventListener("click", ccSignup);
+  byId("go-login").addEventListener("click", showLogin);
+
+  // settings actions
+  byId("settings-save-profile").addEventListener("click", ccSaveProfileFromSettings);
+  byId("settings-save-preferences").addEventListener("click", ccSavePreferences);
+  byId("settings-save-appearance").addEventListener("click", ccSaveAppearance);
+  byId("settings-save-password").addEventListener("click", ccSavePassword);
+  byId("settings-logout").addEventListener("click", ccLogout);
+
+  // nav
+  const navPrivate = document.getElementById("nav-private-profile");
+  if (navPrivate) {
+    navPrivate.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("private-profile");
     });
-    loginPassword.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        ccLogin();
-      }
-    });
-
-    // forgot password
-    byId("btn-reset-password").addEventListener("click", ccResetPassword);
-    byId("back-to-login").addEventListener("click", showLogin);
-
-    // signup
-    byId("btn-signup").addEventListener("click", ccSignup);
-    byId("go-login").addEventListener("click", showLogin);
-
-    // settings actions
-    byId("settings-save-profile").addEventListener("click", ccSaveProfileFromSettings);
-    byId("settings-save-preferences").addEventListener("click", ccSavePreferences);
-    byId("settings-save-appearance").addEventListener("click", ccSaveAppearance);
-    byId("settings-save-password").addEventListener("click", ccSavePassword);
-    byId("settings-logout").addEventListener("click", ccLogout);
-
-    // nav
-    const navPrivate = document.getElementById("nav-private-profile");
-    if (navPrivate) {
-      navPrivate.addEventListener("click", (e) => {
-        e.preventDefault();
-        showSection("private-profile");
-      });
-    }
-
-    const navPublic = document.getElementById("nav-public-profile");
-    if (navPublic) {
-      navPublic.addEventListener("click", (e) => {
-        e.preventDefault();
-        showPublicProfileView();
-      });
-    }
-
-    const navDebates = document.getElementById("nav-debates");
-    if (navDebates) {
-      navDebates.addEventListener("click", (e) => {
-        e.preventDefault();
-        showDebates();
-      });
-    }
-
-    const navSettings = document.getElementById("nav-settings");
-    if (navSettings) {
-      navSettings.addEventListener("click", (e) => {
-        e.preventDefault();
-        loadSettings();
-      });
-    }
-
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", ccLogout);
-    }
-
-    console.log("✅ All listeners attached!");
-  } catch (err) {
-    console.error("❌ Error attaching listeners:", err);
-    throw err;
   }
+
+  const navPublic = document.getElementById("nav-public-profile");
+  if (navPublic) {
+    navPublic.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPublicProfileView();
+    });
+  }
+
+  const navDebates = document.getElementById("nav-debates");
+  if (navDebates) {
+    navDebates.addEventListener("click", (e) => {
+      e.preventDefault();
+      showDebates();
+    });
+  }
+
+  const navSettings = document.getElementById("nav-settings");
+  if (navSettings) {
+    navSettings.addEventListener("click", (e) => {
+      e.preventDefault();
+      loadSettings();
+    });
+  }
+
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", ccLogout);
+  }
+
+  console.log("Listeners attached.");
 }
 
 // ---- Init app ----
 async function initApp() {
-  console.log("=== 🚀 Civic Chatter Initializing ===");
+  console.log("=== Civic Chatter Initializing ===");
   console.log("Supabase client:", sb ? "✓ Connected" : "✗ Not connected");
 
-  try {
-    attachEventListeners();
+  attachEventListeners();
 
-    // If already logged in, show nav + private space
-    console.log("🔍 Checking for existing session...");
+  // If already logged in, show nav + private space
+  try {
     const { data } = await sb.auth.getSession();
     if (data?.session) {
-      console.log("✅ Existing session found");
       showNav();
       showSection("private-profile");
     } else {
-      console.log("ℹ️ No existing session");
       hideNav();
       showLogin();
     }
-  } catch (err) {
-    console.error("❌ Init error:", err);
+  } catch {
     hideNav();
     showLogin();
   }
 
-  console.log("=== ✅ App ready ===");
+  console.log("App ready.");
 }
 
 if (document.readyState === "loading") {
-  console.log("⏳ Waiting for DOM to load...");
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
-  console.log("✅ DOM already loaded");
   initApp();
 }
