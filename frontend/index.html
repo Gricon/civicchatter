@@ -13,13 +13,6 @@
   <!-- PWA (optional) -->
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#002868" />
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () =>
-        navigator.serviceWorker.register("/sw.js").catch(() => {})
-      );
-    }
-  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -48,9 +41,8 @@
       </label>
 
       <div class="row">
-        <!-- direct global function calls -->
-        <button id="btn-login" type="button" class="button--primary" onclick="ccLogin()">Sign In</button>
-        <button id="go-signup" type="button" class="button--ghost" onclick="showSignup()">Create account</button>
+        <button id="btn-login" type="button" class="button--primary">Sign In</button>
+        <button id="go-signup" type="button" class="button--ghost">Create account</button>
       </div>
     </section>
 
@@ -83,8 +75,8 @@
       </label>
 
       <div class="row">
-        <button id="btn-signup" type="button" class="button--primary" onclick="ccSignup()">Create Account</button>
-        <button id="go-login" type="button" class="button--ghost" onclick="showLogin()">Back to login</button>
+        <button id="btn-signup" type="button" class="button--primary">Create Account</button>
+        <button id="go-login" type="button" class="button--ghost">Back to login</button>
       </div>
     </section>
 
@@ -120,7 +112,7 @@
       </div>
 
       <div class="row">
-        <button id="save-profile" type="button" onclick="ccSaveProfile()">Save Profile</button>
+        <button id="save-profile" type="button">Save Profile</button>
         <a id="public-link" class="link" href="#">View Public Page</a>
       </div>
     </section>

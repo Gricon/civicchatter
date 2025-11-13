@@ -2,6 +2,13 @@
    Civic Chatter — app.js
    =========================== */
 
+// ---- Service Worker Registration ----
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () =>
+    navigator.serviceWorker.register("/sw.js").catch(() => {})
+  );
+}
+
 // ---- Supabase init ----
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
@@ -171,13 +178,14 @@ async function resolveEmailForLogin(identifier) {
   return privRow.email;
 }
 
-// simple navigation helpers for buttons
-function showSignup() { showSection("signup-section"); }
-function showLogin()  { showSection("login-section"); }
+// ---- Navigation helpers ----
+function showSignup() { 
+  showSection("signup-section"); 
+}
 
-// expose globally (used by HTML onclick)
-window.showSignup = showSignup;
-window.showLogin  = showLogin;
+function showLogin() { 
+  showSection("login-section"); 
+}
 
 // ---- SIGNUP ----
 async function ccSignup() {
@@ -223,7 +231,6 @@ async function ccSignup() {
     }
   });
 }
-window.ccSignup = ccSignup; // make global
 
 // ---- LOGIN ----
 async function ccLogin() {
@@ -249,7 +256,6 @@ async function ccLogin() {
     handleActionError("login", err);
   }
 }
-window.ccLogin = ccLogin;
 
 // ---- LOAD MY PROFILE ----
 async function loadMyProfile() {
@@ -288,7 +294,7 @@ async function loadMyProfile() {
   }
 }
 
-// ---- SAVE PROFILE (optional; can be expanded later) ----
+// ---- SAVE PROFILE ----
 async function ccSaveProfile() {
   try {
     const user = await requireUser();
@@ -339,8 +345,34 @@ async function ccSaveProfile() {
     handleActionError("profile save", err);
   }
 }
-window.ccSaveProfile = ccSaveProfile;
 
-// ---- Initial view ----
-showSection("login-section");
-console.log("App JS fully loaded");
+// ---- Event Listener Attachments ----
+function attachEventListeners() {
+  // Login page buttons
+  byId("btn-login").addEventListener("click", ccLogin);
+  byId("go-signup").addEventListener("click", showSignup);
+
+  // Signup page buttons
+  byId("btn-signup").addEventListener("click", ccSignup);
+  byId("go-login").addEventListener("click", showLogin);
+
+  // Profile page button
+  byId("save-profile").addEventListener("click", ccSaveProfile);
+
+  console.log("Event listeners attached successfully");
+}
+
+// ---- Initialize app when DOM is ready ----
+function initApp() {
+  attachEventListeners();
+  showSection("login-section");
+  console.log("App JS fully loaded");
+}
+
+// Wait for DOM to be ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  // DOM is already ready
+  initApp();
+}
