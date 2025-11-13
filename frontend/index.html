@@ -38,6 +38,7 @@
 
       <label>Username or Email
         <input id="login-username" type="text" autocomplete="username" placeholder="yourhandle or you@example.com" />
+        <small class="hint">💡 If handle doesn't work, try your email address</small>
       </label>
       <label>Password
         <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" />
@@ -46,6 +47,25 @@
       <div class="row">
         <button id="btn-login" type="button" class="button--primary">Sign In</button>
         <button id="go-signup" type="button" class="button--ghost">Create account</button>
+      </div>
+      
+      <div style="text-align: center; margin-top: 1rem;">
+        <button id="forgot-password-btn" type="button" class="link-button">Forgot password?</button>
+      </div>
+    </section>
+
+    <!-- FORGOT PASSWORD -->
+    <section id="forgot-password-section" class="card hidden">
+      <h2 class="mt-0">Reset Password</h2>
+      <p class="hint">Enter your email address and we'll send you a password reset link.</p>
+
+      <label>Email Address
+        <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com" />
+      </label>
+
+      <div class="row">
+        <button id="btn-reset-password" type="button" class="button--primary">Send Reset Link</button>
+        <button id="back-to-login" type="button" class="button--ghost">Back to login</button>
       </div>
     </section>
 

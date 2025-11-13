@@ -21,7 +21,7 @@ if (!window.supabase) {
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---- helpers ----
-const SECTION_IDS = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page", "settings-page"];
+const SECTION_IDS = ["login-section", "signup-section", "forgot-password-section", "private-profile", "public-profile", "debate-page", "settings-page"];
 
 const formatError = (err) => err?.message || err || "Unknown error";
 
@@ -100,11 +100,18 @@ function handleActionError(action, err) {
   } else if (err?.message?.includes("User already registered")) {
     userMessage = "This email is already registered. Try logging in instead.";
   } else if (err?.message?.includes("Invalid login credentials")) {
-    userMessage = "Invalid username/email or password. Please try again.";
+    userMessage = "Invalid credentials. Please check:\n\n" +
+                  "• Are you using the correct email or handle?\n" +
+                  "• Is your password correct?\n" +
+                  "• Did you create an account yet?\n\n" +
+                  "TIP: Try logging in with your EMAIL address instead of your handle.";
   } else if (err?.message?.includes("Handle is already taken")) {
     userMessage = "This handle is already taken. Please choose a different one.";
   } else if (err?.message?.includes("Handle not found")) {
-    userMessage = "Handle not found. Please check your username or use your email instead.";
+    userMessage = "Handle not found. Please:\n\n" +
+                  "• Check your handle spelling\n" +
+                  "• Or try logging in with your EMAIL instead\n" +
+                  "• Make sure you created an account first";
   }
   
   alert(`${action} error: ${userMessage}`);
@@ -180,19 +187,33 @@ async function createInitialRecords({ userId, handle, name, email, phone, isPriv
 }
 
 async function resolveEmailForLogin(identifier) {
+  console.log("Resolving email for identifier:", identifier);
+  
   if (identifier.includes("@")) {
+    console.log("Identifier is an email, using directly");
     return identifier;
   }
 
+  console.log("Identifier appears to be a handle, looking up in database...");
   const handle = identifier.toLowerCase();
+  
   const { data: pubRow, error: pubErr } = await sb
     .from("profiles_public")
     .select("id")
     .eq("handle", handle)
     .maybeSingle();
 
-  if (pubErr) throw pubErr;
-  if (!pubRow?.id) throw new Error("Handle not found");
+  if (pubErr) {
+    console.error("Error querying profiles_public:", pubErr);
+    throw pubErr;
+  }
+  
+  if (!pubRow?.id) {
+    console.error("No profile found for handle:", handle);
+    throw new Error("Handle not found");
+  }
+  
+  console.log("Found profile with ID:", pubRow.id);
 
   const { data: privRow, error: privErr } = await sb
     .from("profiles_private")
@@ -200,9 +221,17 @@ async function resolveEmailForLogin(identifier) {
     .eq("id", pubRow.id)
     .maybeSingle();
 
-  if (privErr) throw privErr;
-  if (!privRow?.email) throw new Error("No email on file for this user");
+  if (privErr) {
+    console.error("Error querying profiles_private:", privErr);
+    throw privErr;
+  }
+  
+  if (!privRow?.email) {
+    console.error("No email found for user ID:", pubRow.id);
+    throw new Error("No email on file for this user");
+  }
 
+  console.log("Resolved email successfully:", privRow.email);
   return privRow.email;
 }
 
@@ -214,6 +243,11 @@ function showSignup() {
 
 function showLogin() { 
   showSection("login-section");
+  hideNav();
+}
+
+function showForgotPassword() {
+  showSection("forgot-password-section");
   hideNav();
 }
 
@@ -229,6 +263,42 @@ async function ccLogout() {
   } catch (err) {
     handleActionError("logout", err);
   }
+}
+
+// ---- FORGOT PASSWORD ----
+async function ccResetPassword() {
+  await withBusyButton("btn-reset-password", "Sending...", async () => {
+    try {
+      const email = readValue("forgot-email");
+      
+      if (!email) {
+        return alert("Please enter your email address");
+      }
+      
+      if (!email.includes("@")) {
+        return alert("Please enter a valid email address");
+      }
+      
+      console.log("Sending password reset to:", email);
+      
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password.html`
+      });
+      
+      if (error) {
+        console.error("Password reset error:", error);
+        throw error;
+      }
+      
+      alert("Password reset email sent! Check your inbox (and spam folder).");
+      showLogin();
+      
+      // Clear the email field
+      writeValue("forgot-email", "");
+    } catch (err) {
+      handleActionError("password reset", err);
+    }
+  });
 }
 
 // ---- SIGNUP ----
@@ -280,26 +350,39 @@ async function ccSignup() {
 
 // ---- LOGIN ----
 async function ccLogin() {
+  console.log("Login attempt started...");
+  
   try {
     const uname = readValue("login-username");
     const passwd = byId("login-password").value;
 
+    console.log("Username/email:", uname);
+    console.log("Password length:", passwd.length);
+
     if (!uname || !passwd) {
+      console.log("Missing credentials");
       return alert("Enter username/email and password");
     }
 
+    console.log("Resolving email for login...");
     const email = await resolveEmailForLogin(uname);
+    console.log("Resolved email:", email);
+
+    console.log("Attempting sign in...");
     const { data, error } = await sb.auth.signInWithPassword({ email, password: passwd });
 
     if (error) {
+      console.error("Supabase auth error:", error);
       throw error;
     }
 
+    console.log("Sign in successful!", data);
     alert("Login OK!");
     showNav();
     showSection("private-profile");
     await loadMyProfile();
   } catch (err) {
+    console.error("Login error:", err);
     handleActionError("login", err);
   }
 }
@@ -529,76 +612,175 @@ async function showDebates() {
 
 // ---- Event Listener Attachments ----
 function attachEventListeners() {
+  console.log("Attaching event listeners...");
+  
   // Login page buttons
-  byId("btn-login").addEventListener("click", ccLogin);
-  byId("go-signup").addEventListener("click", showSignup);
+  try {
+    const loginBtn = byId("btn-login");
+    loginBtn.addEventListener("click", ccLogin);
+    console.log("✓ Login button listener attached");
+    
+    // Add Enter key support for login fields
+    const loginUsername = byId("login-username");
+    const loginPassword = byId("login-password");
+    
+    loginUsername.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        ccLogin();
+      }
+    });
+    
+    loginPassword.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        ccLogin();
+      }
+    });
+    console.log("✓ Enter key listeners attached to login fields");
+  } catch (err) {
+    console.error("Failed to attach login button:", err);
+  }
+  
+  try {
+    const signupLinkBtn = byId("go-signup");
+    signupLinkBtn.addEventListener("click", showSignup);
+    console.log("✓ Go to signup button listener attached");
+  } catch (err) {
+    console.error("Failed to attach go-signup button:", err);
+  }
+
+  // Forgot password link
+  try {
+    const forgotPasswordBtn = document.getElementById("forgot-password-btn");
+    if (forgotPasswordBtn) {
+      forgotPasswordBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        showForgotPassword();
+      });
+      console.log("✓ Forgot password button listener attached");
+    }
+  } catch (err) {
+    console.error("Failed to attach forgot password button:", err);
+  }
+
+  // Forgot password page buttons
+  try {
+    const resetPasswordBtn = byId("btn-reset-password");
+    resetPasswordBtn.addEventListener("click", ccResetPassword);
+    console.log("✓ Reset password button listener attached");
+  } catch (err) {
+    console.error("Failed to attach reset password button:", err);
+  }
+
+  try {
+    const backToLoginBtn = byId("back-to-login");
+    backToLoginBtn.addEventListener("click", showLogin);
+    console.log("✓ Back to login button listener attached");
+  } catch (err) {
+    console.error("Failed to attach back to login button:", err);
+  }
 
   // Signup page buttons
-  byId("btn-signup").addEventListener("click", ccSignup);
-  byId("go-login").addEventListener("click", showLogin);
+  try {
+    const signupBtn = byId("btn-signup");
+    signupBtn.addEventListener("click", ccSignup);
+    console.log("✓ Signup button listener attached");
+  } catch (err) {
+    console.error("Failed to attach signup button:", err);
+  }
+  
+  try {
+    const loginLinkBtn = byId("go-login");
+    loginLinkBtn.addEventListener("click", showLogin);
+    console.log("✓ Back to login button listener attached");
+  } catch (err) {
+    console.error("Failed to attach go-login button:", err);
+  }
 
   // Profile page button
-  byId("save-profile").addEventListener("click", ccSaveProfile);
+  try {
+    const saveProfileBtn = byId("save-profile");
+    saveProfileBtn.addEventListener("click", ccSaveProfile);
+    console.log("✓ Save profile button listener attached");
+  } catch (err) {
+    console.error("Failed to attach save profile button:", err);
+  }
 
   // Navigation links
   const navPrivateProfile = document.getElementById("nav-private-profile");
   if (navPrivateProfile) {
     navPrivateProfile.addEventListener("click", (e) => {
       e.preventDefault();
+      console.log("Navigating to private profile");
       showSection("private-profile");
       loadMyProfile();
     });
+    console.log("✓ Private profile nav listener attached");
   }
 
   const navPublicProfile = document.getElementById("nav-public-profile");
   if (navPublicProfile) {
     navPublicProfile.addEventListener("click", (e) => {
       e.preventDefault();
+      console.log("Navigating to public profile");
       showPublicProfileView();
     });
+    console.log("✓ Public profile nav listener attached");
   }
 
   const navDebates = document.getElementById("nav-debates");
   if (navDebates) {
     navDebates.addEventListener("click", (e) => {
       e.preventDefault();
+      console.log("Navigating to debates");
       showDebates();
     });
+    console.log("✓ Debates nav listener attached");
   }
 
   const navSettings = document.getElementById("nav-settings");
   if (navSettings) {
     navSettings.addEventListener("click", (e) => {
       e.preventDefault();
+      console.log("Navigating to settings");
       loadSettings();
     });
+    console.log("✓ Settings nav listener attached");
   }
 
   // Logout buttons (both in nav and in settings)
   const logoutBtn = document.getElementById("logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", ccLogout);
+    console.log("✓ Logout button (nav) listener attached");
   }
 
   const settingsLogout = document.getElementById("settings-logout");
   if (settingsLogout) {
     settingsLogout.addEventListener("click", ccLogout);
+    console.log("✓ Logout button (settings) listener attached");
   }
 
   // Settings save button
   const settingsSave = document.getElementById("settings-save");
   if (settingsSave) {
     settingsSave.addEventListener("click", ccSaveSettings);
+    console.log("✓ Settings save button listener attached");
   }
 
-  console.log("Event listeners attached successfully");
+  console.log("All event listeners attached successfully!");
 }
 
 // ---- Initialize app when DOM is ready ----
 function initApp() {
+  console.log("=== Civic Chatter Initializing ===");
+  console.log("Supabase client:", sb ? "✓ Connected" : "✗ Not connected");
+  
   attachEventListeners();
   showSection("login-section");
-  console.log("App JS fully loaded");
+  console.log("App JS fully loaded and ready!");
+  console.log("=================================");
 }
 
 // Wait for DOM to be ready
