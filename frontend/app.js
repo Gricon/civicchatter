@@ -79,7 +79,25 @@ function showSection(id) {
 
 function handleActionError(action, err) {
   console.error(`${action} failed:`, err);
-  alert(`Unexpected ${action} error: ${formatError(err)}`);
+  
+  // Provide user-friendly error messages for common issues
+  let userMessage = formatError(err);
+  
+  if (err?.message?.includes("Password should be at least")) {
+    userMessage = "Password must be at least 6 characters long.";
+  } else if (err?.message?.includes("Email signups are disabled")) {
+    userMessage = "Email signups are currently disabled. Please contact support.";
+  } else if (err?.message?.includes("User already registered")) {
+    userMessage = "This email is already registered. Try logging in instead.";
+  } else if (err?.message?.includes("Invalid login credentials")) {
+    userMessage = "Invalid username/email or password. Please try again.";
+  } else if (err?.message?.includes("Handle is already taken")) {
+    userMessage = "This handle is already taken. Please choose a different one.";
+  } else if (err?.message?.includes("Handle not found")) {
+    userMessage = "Handle not found. Please check your username or use your email instead.";
+  }
+  
+  alert(`${action} error: ${userMessage}`);
 }
 
 async function requireUser() {
@@ -201,6 +219,7 @@ async function ccSignup() {
       if (!name) return alert("Enter your name");
       if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
       if (!email || !passwd) return alert("Email & password required");
+      if (passwd.length < 6) return alert("Password must be at least 6 characters long");
 
       await ensureHandleAvailable(handle);
 
