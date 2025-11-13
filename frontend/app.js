@@ -915,20 +915,31 @@ async function uploadAvatarBlobXHR(blob, filename, onProgress) {
           // Construct public URL (depends on bucket public settings)
           const publicUrl = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${path}`;
           resolve(publicUrl);
-        } else if (xhr.status === 404) {
-          // Supabase returns 404 when the bucket doesn't exist
+          return;
+        }
+
+        // Some Supabase responses surface bucket-not-found as a 404, but in
+        // certain proxies or clients you may see a 400 with a JSON body that
+        // contains { statusCode: 404, message: 'Bucket not found' }. Detect both
+        // patterns and give a clear remediation hint.
+        let bodyText = xhr.responseText || '';
+        let body = null;
+        try { body = JSON.parse(bodyText || '{}'); } catch (e) { body = null; }
+
+        const indicatesBucketMissing = xhr.status === 404 ||
+          (body && (body.statusCode === 404 || /bucket not found/i.test(body.message || ''))) ||
+          /bucket not found/i.test(bodyText);
+
+        if (indicatesBucketMissing) {
           let msg = `Upload failed: ${xhr.status} ${xhr.statusText}`;
-          try {
-            const body = JSON.parse(xhr.responseText || '{}');
-            if (body?.message) msg += ` — ${body.message}`;
-          } catch (e) {
-            // ignore parse errors
-          }
+          if (body && body.message) msg += ` — ${body.message}`;
           msg += `\n\nHint: The storage bucket '${bucket}' was not found on the Supabase project. Create the bucket named '${bucket}' in the Supabase dashboard (Storage → Buckets) and ensure it allows uploads/read as needed.`;
           reject(new Error(msg));
-        } else {
-          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} ${xhr.responseText || ''}`));
+          return;
         }
+
+        // Fallback: generic error
+        reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} ${bodyText || ''}`));
       };
       xhr.onerror = function (e) { reject(new Error('Network error during upload')); };
       xhr.send(blob);
