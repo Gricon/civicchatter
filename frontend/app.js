@@ -310,20 +310,17 @@ async function handleSignup() {
           "Signup succeeded but no user returned. Check Supabase Auth settings."
         );
       }
-
-      await createInitialRecords({
-        userId: user.id,
-        handle,
-        name,
-        email,
-        phone,
-        isPrivate,
-        address,
-      });
-
-      alert("Account created!");
-      showNav();
-      await loadMyProfile();
+      // If a DB trigger is installed it will create the public/private
+      // profile and debate page automatically. Rely on that instead of
+      // making client-side upserts which can be blocked by RLS policies.
+      alert("Account created! Please check your email to confirm (if required).\nYou can sign in once your email is confirmed.");
+      // Optionally attempt to load profile if the trigger already ran
+      try {
+        showNav();
+        await loadMyProfile();
+      } catch (e) {
+        console.debug('Profile not yet provisioned by trigger', e);
+      }
       window.location.hash = "#/profile";
     } catch (err) {
       alertActionError("signup", err);
