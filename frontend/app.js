@@ -451,6 +451,19 @@ async function handleCreatePost() {
     const status = byId('post-status');
     if (status) status.textContent = 'Posting…';
 
+    // Preflight: check that posts table exists so we can fail fast with a clear message
+    try {
+      const { error: tableErr } = await sb.from('posts').select('id').limit(1);
+      if (tableErr) {
+        console.warn('posts table check error', tableErr);
+        if (status) status.textContent = 'Error: posts table not found (run DB migration)';
+        throw tableErr;
+      }
+    } catch (e) {
+      // rethrow so outer catch shows a helpful message
+      throw e;
+    }
+
     let media_url = null;
     let media_type = null;
     if (fileEl && fileEl.files && fileEl.files[0]) {
@@ -463,9 +476,16 @@ async function handleCreatePost() {
       const filename = `${userId}/${Date.now()}_${f.name}`;
       // use simple storage upload (sdk) which may not provide progress here
       const { error: upErr } = await sb.storage.from('posts').upload(filename, f, { upsert: false });
-      if (upErr) throw upErr;
+      if (upErr) {
+        console.error('storage upload error', upErr);
+        if (status) status.textContent = `Upload failed: ${upErr.message || JSON.stringify(upErr)}`;
+        throw upErr;
+      }
       const { data } = sb.storage.from('posts').getPublicUrl(filename);
-      media_url = data?.publicUrl || null;
+      media_url = (data && (data.publicUrl || data.public_url)) || null;
+      if (!media_url) {
+        console.warn('getPublicUrl returned no url', data);
+      }
     }
 
     // insert post row (will fail if table not created)
@@ -477,7 +497,11 @@ async function handleCreatePost() {
       link: link || null,
     };
     const { error: insErr } = await sb.from('posts').insert(insertRow);
-    if (insErr) throw insErr;
+    if (insErr) {
+      console.error('insert post error', insErr);
+      if (status) status.textContent = `Failed to save post: ${insErr.message || JSON.stringify(insErr)}`;
+      throw insErr;
+    }
 
     if (status) status.textContent = 'Posted';
     writeValue('post-text', '');
@@ -486,8 +510,14 @@ async function handleCreatePost() {
     // refresh posts
     await loadMyPosts();
   } catch (err) {
-    alertActionError('create post', err);
-    const status = byId('post-status'); if (status) status.textContent = '';
+    console.error('handleCreatePost failed', err);
+    // Show helpful error to the user in the UI
+    const statusEl = byId('post-status');
+    if (statusEl) {
+      statusEl.textContent = err?.message || (err?.error && err.error.message) || 'Failed to create post';
+    } else {
+      alertActionError('create post', err);
+    }
   }
 }
 
