@@ -1,0 +1,15 @@
+# ================================
+#   Netlify Clean Minimal Config
+#   No CSP, No Extra Headers
+# ================================
+
+[build]
+  publish = "frontend"
+  command = ""
+
+# SPA Redirect (important)
+# Any unknown route → index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
