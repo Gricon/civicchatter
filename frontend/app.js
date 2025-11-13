@@ -1,9 +1,6 @@
 /* ===========================
    Civic Chatter — app.js
-   (minimal, noisy version)
    =========================== */
-
-alert("Civic Chatter JS loaded"); // remove later once it's working
 
 // ---- Supabase init ----
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
@@ -15,21 +12,143 @@ if (!window.supabase) {
 }
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log("Supabase client created:", sb);
 
 // ---- helpers ----
+const SECTION_IDS = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page"];
+
+const formatError = (err) => err?.message || err || "Unknown error";
+
+function byId(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    throw new Error(`Missing DOM element #${id}`);
+  }
+  return el;
+}
+
+function readValue(id, { lowercase = false } = {}) {
+  const el = byId(id);
+  const value = (el.value ?? "").trim();
+  return lowercase ? value.toLowerCase() : value;
+}
+
+function writeValue(id, value) {
+  const el = byId(id);
+  if ("value" in el) el.value = value ?? "";
+}
+
 function isValidHandle(h) {
   return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
 }
 
 function showSection(id) {
-  const ids = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page"];
-  ids.forEach(secId => {
+  SECTION_IDS.forEach(secId => {
     const el = document.getElementById(secId);
     if (!el) return;
     if (secId === id) el.classList.remove("hidden");
     else el.classList.add("hidden");
   });
+}
+
+function handleActionError(action, err) {
+  console.error(`${action} failed:`, err);
+  alert(`Unexpected ${action} error: ${formatError(err)}`);
+}
+
+async function requireUser() {
+  const { data, error } = await sb.auth.getUser();
+  if (error) throw error;
+  if (!data?.user) throw new Error("No logged-in user");
+  return data.user;
+}
+
+async function ensureHandleAvailable(handle, { allowOwnerId = null } = {}) {
+  const { data, error } = await sb
+    .from("profiles_public")
+    .select("id")
+    .eq("handle", handle)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    throw error;
+  }
+  if (data && data.id !== allowOwnerId) {
+    throw new Error("Handle is already taken");
+  }
+}
+
+async function createInitialRecords({ userId, handle, name, email, phone, isPrivate }) {
+  const upsertOrThrow = async (promise, label) => {
+    const { error } = await promise;
+    if (error) throw new Error(`${label}: ${error.message}`);
+  };
+
+  await upsertOrThrow(
+    sb.from("profiles_public").upsert(
+      {
+        id: userId,
+        handle,
+        display_name: name,
+        is_private: isPrivate,
+        is_searchable: !isPrivate,
+      },
+      { onConflict: "id" }
+    ),
+    "public profile"
+  );
+
+  await upsertOrThrow(
+    sb.from("profiles_private").upsert(
+      {
+        id: userId,
+        email,
+        phone: phone || null,
+        preferred_contact: phone ? "sms" : "email",
+      },
+      { onConflict: "id" }
+    ),
+    "private profile"
+  );
+
+  await upsertOrThrow(
+    sb.from("debate_pages").upsert(
+      {
+        id: userId,
+        handle,
+        title: `${name || handle}'s Debates`,
+        description: "Debate topics and positions.",
+      },
+      { onConflict: "id" }
+    ),
+    "debate page"
+  );
+}
+
+async function resolveEmailForLogin(identifier) {
+  if (identifier.includes("@")) {
+    return identifier;
+  }
+
+  const handle = identifier.toLowerCase();
+  const { data: pubRow, error: pubErr } = await sb
+    .from("profiles_public")
+    .select("id")
+    .eq("handle", handle)
+    .maybeSingle();
+
+  if (pubErr) throw pubErr;
+  if (!pubRow?.id) throw new Error("Handle not found");
+
+  const { data: privRow, error: privErr } = await sb
+    .from("profiles_private")
+    .select("email")
+    .eq("id", pubRow.id)
+    .maybeSingle();
+
+  if (privErr) throw privErr;
+  if (!privRow?.email) throw new Error("No email on file for this user");
+
+  return privRow.email;
 }
 
 // simple navigation helpers for buttons
@@ -42,40 +161,20 @@ window.showLogin  = showLogin;
 
 // ---- SIGNUP ----
 async function ccSignup() {
-  console.log("ccSignup clicked");
   try {
-    const name   = document.getElementById("signup-name").value.trim();
-    const handle = document.getElementById("signup-handle").value.trim().toLowerCase();
-    const email  = document.getElementById("signup-email").value.trim();
-    const phone  = document.getElementById("signup-phone").value.trim();
-    const passwd = document.getElementById("signup-password").value;
-    const addr   = document.getElementById("signup-address").value.trim();
-    const isPriv = document.getElementById("signup-private").checked;
+    const name   = readValue("signup-name");
+    const handle = readValue("signup-handle", { lowercase: true });
+    const email  = readValue("signup-email");
+    const phone  = readValue("signup-phone");
+    const passwd = byId("signup-password").value;
+    const isPriv = byId("signup-private").checked;
 
-    console.log("Signup form data:", { name, handle, email, phone, addr, isPriv });
-
-    if (!name)  return alert("Enter your name");
+    if (!name) return alert("Enter your name");
     if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
     if (!email || !passwd) return alert("Email & password required");
 
-    // check handle availability
-    const { data: existing, error: handleErr } = await sb
-      .from("profiles_public")
-      .select("id")
-      .eq("handle", handle)
-      .maybeSingle();
+    await ensureHandleAvailable(handle);
 
-    if (handleErr && handleErr.code !== "PGRST116") {
-      console.error("Handle check error:", handleErr);
-      alert("Error checking handle: " + handleErr.message);
-      return;
-    }
-
-    if (existing) {
-      return alert("Handle is already taken");
-    }
-
-    console.log("Calling auth.signUp...");
     const { data: signData, error: signError } = await sb.auth.signUp({
       email,
       password: passwd,
@@ -83,153 +182,49 @@ async function ccSignup() {
       // options: { emailRedirectTo: "https://civicchatter.netlify.app/auth-callback.html" },
     });
 
-    console.log("signUp result:", { signData, signError });
-
     if (signError) {
-      alert("Signup error: " + signError.message);
-      return;
+      throw signError;
     }
 
-    // email confirmations OFF → we should have a session now
     const user = signData.user;
     if (!user) {
-      alert("Signup succeeded but no user returned. Check Supabase Auth settings.");
-      return;
+      throw new Error("Signup succeeded but no user returned. Check Supabase Auth settings.");
     }
-
-    alert("Auth user created! Now writing profile rows…");
-    console.log("New user id:", user.id);
 
     const userId = user.id;
-
-    // --- Public profile ---
-    const { error: pubErr } = await sb.from("profiles_public").upsert(
-      {
-        id: userId,
-        handle,
-        display_name: name,
-        is_private: isPriv,
-        is_searchable: !isPriv
-      },
-      { onConflict: "id" }
-    );
-    console.log("profiles_public upsert error:", pubErr);
-    if (pubErr) {
-      alert("Error creating public profile: " + pubErr.message);
-      return;
-    }
-
-    // --- Private profile ---
-    const { error: privErr } = await sb.from("profiles_private").upsert(
-      {
-        id: userId,
-        email,
-        phone: phone || null,
-        preferred_contact: phone ? "sms" : "email",
-        // NOTE: I'm NOT inserting "address" here in case your table
-        // doesn't have that column yet. We can add it later once schema matches.
-      },
-      { onConflict: "id" }
-    );
-    console.log("profiles_private upsert error:", privErr);
-    if (privErr) {
-      alert("Error creating private profile: " + privErr.message);
-      return;
-    }
-
-    // --- Debate page ---
-    const { error: debErr } = await sb.from("debate_pages").upsert(
-      {
-        id: userId,
-        handle,
-        title: `${name || handle}'s Debates`,
-        description: "Debate topics and positions.",
-      },
-      { onConflict: "id" }
-    );
-    console.log("debate_pages upsert error:", debErr);
-    if (debErr) {
-      alert("Error creating debate page: " + debErr.message);
-      return;
-    }
+    await createInitialRecords({ userId, handle, name, email, phone, isPrivate: isPriv });
 
     alert("Account and pages created successfully!");
-    // Optionally jump to profile:
     showSection("private-profile");
+    await loadMyProfile();
   } catch (err) {
-    console.error("ccSignup error:", err);
-    alert("Unexpected signup error: " + (err?.message || err));
+    handleActionError("signup", err);
   }
 }
 window.ccSignup = ccSignup; // make global
 
 // ---- LOGIN ----
 async function ccLogin() {
-  console.log("ccLogin clicked");
   try {
-    const uname = document.getElementById("login-username").value.trim();
-    const passwd = document.getElementById("login-password").value;
+    const uname = readValue("login-username");
+    const passwd = byId("login-password").value;
 
     if (!uname || !passwd) {
       return alert("Enter username/email and password");
     }
 
-    let email = null;
-    if (uname.includes("@")) {
-      email = uname;
-    } else {
-      // treat uname as handle
-      const { data: pubRow, error: pubErr } = await sb
-        .from("profiles_public")
-        .select("id")
-        .eq("handle", uname.toLowerCase())
-        .maybeSingle();
-
-      console.log("Lookup handle result:", { pubRow, pubErr });
-
-      if (pubErr) {
-        alert("Error looking up handle: " + pubErr.message);
-        return;
-      }
-      if (!pubRow?.id) {
-        alert("Handle not found");
-        return;
-      }
-
-      const { data: privRow, error: privErr } = await sb
-        .from("profiles_private")
-        .select("email")
-        .eq("id", pubRow.id)
-        .maybeSingle();
-
-      console.log("Resolve email result:", { privRow, privErr });
-
-      if (privErr) {
-        alert("Error resolving email: " + privErr.message);
-        return;
-      }
-      if (!privRow?.email) {
-        alert("No email on file for this user");
-        return;
-      }
-      email = privRow.email;
-    }
-
-    console.log("Signing in with email:", email);
+    const email = await resolveEmailForLogin(uname);
     const { data, error } = await sb.auth.signInWithPassword({ email, password: passwd });
-    console.log("signIn result:", { data, error });
 
     if (error) {
-      alert("Login error: " + error.message);
-      return;
+      throw error;
     }
 
     alert("Login OK!");
     showSection("private-profile");
     await loadMyProfile();
   } catch (err) {
-    console.error("ccLogin error:", err);
-    alert("Unexpected login error: " + (err?.message || err));
+    handleActionError("login", err);
   }
 }
 window.ccLogin = ccLogin;
@@ -237,12 +232,7 @@ window.ccLogin = ccLogin;
 // ---- LOAD MY PROFILE ----
 async function loadMyProfile() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
-    console.log("loadMyProfile user:", user);
-    if (!user) {
-      alert("No logged-in user");
-      return;
-    }
+    const user = await requireUser();
 
     const { data: pubRow, error: pubErr } = await sb
       .from("profiles_public")
@@ -250,14 +240,12 @@ async function loadMyProfile() {
       .eq("id", user.id)
       .maybeSingle();
 
-    console.log("Public profile row:", { pubRow, pubErr });
-
     if (!pubErr && pubRow) {
-      document.getElementById("pp-handle").value        = pubRow.handle || "";
-      document.getElementById("pp-display-name").value  = pubRow.display_name || "";
-      document.getElementById("pp-bio").value           = pubRow.bio || "";
-      document.getElementById("pp-city").value          = pubRow.city || "";
-      document.getElementById("pp-avatar-url").value    = pubRow.avatar_url || "";
+      writeValue("pp-handle", pubRow.handle || "");
+      writeValue("pp-display-name", pubRow.display_name || "");
+      writeValue("pp-bio", pubRow.bio || "");
+      writeValue("pp-city", pubRow.city || "");
+      writeValue("pp-avatar-url", pubRow.avatar_url || "");
 
       const link = document.getElementById("public-link");
       if (link && pubRow.handle) link.href = `#/u/${pubRow.handle.toLowerCase()}`;
@@ -269,34 +257,33 @@ async function loadMyProfile() {
       .eq("id", user.id)
       .maybeSingle();
 
-    console.log("Private profile row:", { privRow, privErr });
-
     if (!privErr && privRow) {
-      document.getElementById("pr-email").value = privRow.email || "";
-      document.getElementById("pr-phone").value = privRow.phone || "";
+      writeValue("pr-email", privRow.email || "");
+      writeValue("pr-phone", privRow.phone || "");
     }
   } catch (err) {
-    console.error("loadMyProfile error:", err);
+    handleActionError("profile load", err);
   }
 }
 
 // ---- SAVE PROFILE (optional; can be expanded later) ----
 async function ccSaveProfile() {
-  console.log("ccSaveProfile clicked");
   try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) {
-      alert("Not signed in");
-      return;
+    const user = await requireUser();
+
+    const handle      = readValue("pp-handle", { lowercase: true });
+    const displayName = readValue("pp-display-name");
+    const bio         = readValue("pp-bio");
+    const city        = readValue("pp-city");
+    const avatarUrl   = readValue("pp-avatar-url");
+    const email       = readValue("pr-email");
+    const phone       = readValue("pr-phone");
+
+    if (!isValidHandle(handle)) {
+      return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
     }
 
-    const handle      = document.getElementById("pp-handle").value.trim().toLowerCase();
-    const displayName = document.getElementById("pp-display-name").value.trim();
-    const bio         = document.getElementById("pp-bio").value.trim();
-    const city        = document.getElementById("pp-city").value.trim();
-    const avatarUrl   = document.getElementById("pp-avatar-url").value.trim();
-    const email       = document.getElementById("pr-email").value.trim();
-    const phone       = document.getElementById("pr-phone").value.trim();
+    await ensureHandleAvailable(handle, { allowOwnerId: user.id });
 
     const { error: pubErr } = await sb.from("profiles_public").upsert(
       {
@@ -309,10 +296,8 @@ async function ccSaveProfile() {
       },
       { onConflict: "id" }
     );
-    console.log("profiles_public save error:", pubErr);
     if (pubErr) {
-      alert("Error saving public profile: " + pubErr.message);
-      return;
+      throw new Error("Error saving public profile: " + pubErr.message);
     }
 
     const { error: privErr } = await sb.from("profiles_private").upsert(
@@ -323,16 +308,13 @@ async function ccSaveProfile() {
       },
       { onConflict: "id" }
     );
-    console.log("profiles_private save error:", privErr);
     if (privErr) {
-      alert("Error saving private profile: " + privErr.message);
-      return;
+      throw new Error("Error saving private profile: " + privErr.message);
     }
 
     alert("Profile saved");
   } catch (err) {
-    console.error("ccSaveProfile error:", err);
-    alert("Unexpected save error: " + (err?.message || err));
+    handleActionError("profile save", err);
   }
 }
 window.ccSaveProfile = ccSaveProfile;
