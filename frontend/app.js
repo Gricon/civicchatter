@@ -1119,6 +1119,7 @@ function attachEventListeners() {
 
   // Save profile
   byId("save-profile")?.addEventListener("click", handleSaveProfile);
+  byId('post-create')?.addEventListener('click', handleCreatePost);
 
   // Nav + logout
   byId("logout-link")?.addEventListener("click", (e) => {
