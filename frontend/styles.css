@@ -87,14 +87,18 @@ body {
 /* =========================
    Header / Nav
    ========================= */
+
+
 header {
   position: sticky;
   top: 0;
   z-index: 10;
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  padding: 1rem 2rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   /* patriotic gradient header */
   background: linear-gradient(90deg, #002868 0%, #002868 50%, #bf0a30 100%);
   color: white;
@@ -103,21 +107,18 @@ header {
 
 header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-align: center;
 }
 
 #nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
-  /* Center the nav horizontally at the top of the header */
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 50%;
-  transform-origin: center top;
-  /* keep it visually near the top */
-  margin-top: -0.5rem;
+  position: static;
+  transform: none;
+  margin-top: 0.25rem;
 }
 
 #nav.hidden {
