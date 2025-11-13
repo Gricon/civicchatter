@@ -915,6 +915,17 @@ async function uploadAvatarBlobXHR(blob, filename, onProgress) {
           // Construct public URL (depends on bucket public settings)
           const publicUrl = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${path}`;
           resolve(publicUrl);
+        } else if (xhr.status === 404) {
+          // Supabase returns 404 when the bucket doesn't exist
+          let msg = `Upload failed: ${xhr.status} ${xhr.statusText}`;
+          try {
+            const body = JSON.parse(xhr.responseText || '{}');
+            if (body?.message) msg += ` — ${body.message}`;
+          } catch (e) {
+            // ignore parse errors
+          }
+          msg += `\n\nHint: The storage bucket '${bucket}' was not found on the Supabase project. Create the bucket named '${bucket}' in the Supabase dashboard (Storage → Buckets) and ensure it allows uploads/read as needed.`;
+          reject(new Error(msg));
         } else {
           reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} ${xhr.responseText || ''}`));
         }
