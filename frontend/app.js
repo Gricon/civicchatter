@@ -21,7 +21,7 @@ if (!window.supabase) {
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---- helpers ----
-const SECTION_IDS = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page"];
+const SECTION_IDS = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page", "settings-page"];
 
 const formatError = (err) => err?.message || err || "Unknown error";
 
@@ -75,6 +75,16 @@ function showSection(id) {
     if (secId === id) el.classList.remove("hidden");
     else el.classList.add("hidden");
   });
+}
+
+function showNav() {
+  const nav = document.getElementById("nav");
+  if (nav) nav.classList.remove("hidden");
+}
+
+function hideNav() {
+  const nav = document.getElementById("nav");
+  if (nav) nav.classList.add("hidden");
 }
 
 function handleActionError(action, err) {
@@ -198,11 +208,27 @@ async function resolveEmailForLogin(identifier) {
 
 // ---- Navigation helpers ----
 function showSignup() { 
-  showSection("signup-section"); 
+  showSection("signup-section");
+  hideNav();
 }
 
 function showLogin() { 
-  showSection("login-section"); 
+  showSection("login-section");
+  hideNav();
+}
+
+// ---- LOGOUT ----
+async function ccLogout() {
+  try {
+    const { error } = await sb.auth.signOut();
+    if (error) throw error;
+    
+    alert("Logged out successfully");
+    hideNav();
+    showSection("login-section");
+  } catch (err) {
+    handleActionError("logout", err);
+  }
 }
 
 // ---- SIGNUP ----
@@ -243,6 +269,7 @@ async function ccSignup() {
       await createInitialRecords({ userId, handle, name, email, phone, isPrivate: isPriv });
 
       alert("Account and pages created successfully!");
+      showNav();
       showSection("private-profile");
       await loadMyProfile();
     } catch (err) {
@@ -269,6 +296,7 @@ async function ccLogin() {
     }
 
     alert("Login OK!");
+    showNav();
     showSection("private-profile");
     await loadMyProfile();
   } catch (err) {
@@ -365,6 +393,140 @@ async function ccSaveProfile() {
   }
 }
 
+// ---- SHOW PUBLIC PROFILE VIEW ----
+async function showPublicProfileView() {
+  try {
+    const user = await requireUser();
+    
+    const { data: pubRow, error: pubErr } = await sb
+      .from("profiles_public")
+      .select("handle, display_name, bio, city, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (pubErr) throw pubErr;
+    
+    if (pubRow) {
+      const avatar = document.getElementById("pub-avatar");
+      const displayName = document.getElementById("pub-display-name");
+      const handle = document.getElementById("pub-handle");
+      const city = document.getElementById("pub-city");
+      const bio = document.getElementById("pub-bio");
+      
+      if (avatar) avatar.src = pubRow.avatar_url || "https://via.placeholder.com/80";
+      if (displayName) displayName.textContent = pubRow.display_name || "Anonymous";
+      if (handle) handle.textContent = `@${pubRow.handle}`;
+      if (city) city.textContent = pubRow.city || "";
+      if (bio) bio.textContent = pubRow.bio || "No bio yet.";
+    }
+    
+    showSection("public-profile");
+  } catch (err) {
+    handleActionError("public profile view", err);
+  }
+}
+
+// ---- LOAD SETTINGS ----
+async function loadSettings() {
+  try {
+    const user = await requireUser();
+
+    const { data: pubRow, error: pubErr } = await sb
+      .from("profiles_public")
+      .select("is_private")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!pubErr && pubRow) {
+      const privacySelect = document.getElementById("settings-privacy");
+      if (privacySelect) {
+        privacySelect.value = pubRow.is_private ? "private" : "public";
+      }
+    }
+
+    const { data: privRow, error: privErr } = await sb
+      .from("profiles_private")
+      .select("preferred_contact")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!privErr && privRow) {
+      const contactSelect = document.getElementById("settings-contact");
+      if (contactSelect) {
+        contactSelect.value = privRow.preferred_contact || "email";
+      }
+    }
+
+    showSection("settings-page");
+  } catch (err) {
+    handleActionError("settings load", err);
+  }
+}
+
+// ---- SAVE SETTINGS ----
+async function ccSaveSettings() {
+  try {
+    const user = await requireUser();
+
+    const privacy = document.getElementById("settings-privacy").value;
+    const contact = document.getElementById("settings-contact").value;
+
+    const isPrivate = privacy === "private";
+
+    const { error: pubErr } = await sb.from("profiles_public").upsert(
+      {
+        id: user.id,
+        is_private: isPrivate,
+        is_searchable: !isPrivate,
+      },
+      { onConflict: "id" }
+    );
+    if (pubErr) {
+      throw new Error("Error saving privacy settings: " + pubErr.message);
+    }
+
+    const { error: privErr } = await sb.from("profiles_private").upsert(
+      {
+        id: user.id,
+        preferred_contact: contact,
+      },
+      { onConflict: "id" }
+    );
+    if (privErr) {
+      throw new Error("Error saving contact preference: " + privErr.message);
+    }
+
+    alert("Settings saved successfully");
+  } catch (err) {
+    handleActionError("settings save", err);
+  }
+}
+
+// ---- SHOW DEBATES ----
+async function showDebates() {
+  try {
+    const user = await requireUser();
+    
+    const { data: debateRow, error: debErr } = await sb
+      .from("debate_pages")
+      .select("title, description")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!debErr && debateRow) {
+      const title = document.getElementById("deb-title");
+      const desc = document.getElementById("deb-desc");
+      
+      if (title) title.textContent = debateRow.title || "My Debates";
+      if (desc) desc.textContent = debateRow.description || "";
+    }
+    
+    showSection("debate-page");
+  } catch (err) {
+    handleActionError("debates load", err);
+  }
+}
+
 // ---- Event Listener Attachments ----
 function attachEventListeners() {
   // Login page buttons
@@ -377,6 +539,57 @@ function attachEventListeners() {
 
   // Profile page button
   byId("save-profile").addEventListener("click", ccSaveProfile);
+
+  // Navigation links
+  const navPrivateProfile = document.getElementById("nav-private-profile");
+  if (navPrivateProfile) {
+    navPrivateProfile.addEventListener("click", (e) => {
+      e.preventDefault();
+      showSection("private-profile");
+      loadMyProfile();
+    });
+  }
+
+  const navPublicProfile = document.getElementById("nav-public-profile");
+  if (navPublicProfile) {
+    navPublicProfile.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPublicProfileView();
+    });
+  }
+
+  const navDebates = document.getElementById("nav-debates");
+  if (navDebates) {
+    navDebates.addEventListener("click", (e) => {
+      e.preventDefault();
+      showDebates();
+    });
+  }
+
+  const navSettings = document.getElementById("nav-settings");
+  if (navSettings) {
+    navSettings.addEventListener("click", (e) => {
+      e.preventDefault();
+      loadSettings();
+    });
+  }
+
+  // Logout buttons (both in nav and in settings)
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", ccLogout);
+  }
+
+  const settingsLogout = document.getElementById("settings-logout");
+  if (settingsLogout) {
+    settingsLogout.addEventListener("click", ccLogout);
+  }
+
+  // Settings save button
+  const settingsSave = document.getElementById("settings-save");
+  if (settingsSave) {
+    settingsSave.addEventListener("click", ccSaveSettings);
+  }
 
   console.log("Event listeners attached successfully");
 }

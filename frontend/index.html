@@ -21,9 +21,11 @@
   <header>
     <h1>Civic Chatter</h1>
     <nav id="nav" class="hidden">
-      <a href="#/profile" class="nav-link">My Profile</a>
-      <a href="#/d/me" class="nav-link" id="my-debate-link">My Debate</a>
-      <a href="#/login" class="nav-link" id="logout-link">Logout</a>
+      <a href="#/profile/private" class="nav-link" id="nav-private-profile">Private Profile</a>
+      <a href="#/profile/public" class="nav-link" id="nav-public-profile">Public Profile</a>
+      <a href="#/debates" class="nav-link" id="nav-debates">Debates</a>
+      <a href="#/settings" class="nav-link" id="nav-settings">Settings</a>
+      <button type="button" class="logout-btn" id="logout-btn">Logout</button>
     </nav>
   </header>
 
@@ -137,6 +139,33 @@
       <h2 id="deb-title" class="mt-0">Debates</h2>
       <p id="deb-desc" class="hint"></p>
       <div id="deb-content" style="margin-top:1rem;"></div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section class="card hidden" id="settings-page">
+      <h2 class="mt-0">Settings</h2>
+      
+      <h3>Account</h3>
+      <div class="grid">
+        <label>Privacy
+          <select id="settings-privacy">
+            <option value="public">Public Profile (searchable)</option>
+            <option value="private">Private Profile (not searchable)</option>
+          </select>
+        </label>
+        <label>Preferred Contact
+          <select id="settings-contact">
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+          </select>
+        </label>
+      </div>
+
+      <h3>Account Actions</h3>
+      <div class="row">
+        <button id="settings-logout" type="button" class="button--ghost">Logout</button>
+        <button id="settings-save" type="button" class="button--primary">Save Settings</button>
+      </div>
     </section>
 
     <!-- Tiny text to remind us -->
