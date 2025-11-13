@@ -166,6 +166,48 @@
       <h2>Site Settings</h2>
       <p class="hint">Customize the site appearance. Changes are saved in your browser.</p>
 
+      <!-- Profile summary at top of settings with an inline edit option -->
+      <div id="settings-profile" class="card mt-1" style="display:flex; align-items:center; gap:1rem;">
+        <img id="sp-avatar" src="https://via.placeholder.com/64" alt="avatar" class="avatar" style="width:64px;height:64px;" />
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <div>
+              <h3 id="sp-display-name" class="mt-0 mb-0">Loading...</h3>
+              <div class="handle" id="sp-handle">@loading</div>
+              <div class="hint" id="sp-email">(no email)</div>
+            </div>
+            <div style="margin-left:auto;">
+              <button id="settings-edit-profile" class="button--ghost">Edit</button>
+            </div>
+          </div>
+
+          <!-- Inline edit form (hidden by default) -->
+          <form id="settings-profile-edit" class="hidden mt-1">
+            <div class="grid">
+              <label>Handle
+                <input id="sp-handle-input" type="text" />
+              </label>
+              <label>Display Name
+                <input id="sp-display-name-input" type="text" />
+              </label>
+              <label>Avatar URL
+                <input id="sp-avatar-input" type="url" />
+              </label>
+              <label>Email
+                <input id="sp-email-input" type="email" />
+              </label>
+              <label>Phone
+                <input id="sp-phone-input" type="tel" />
+              </label>
+            </div>
+            <div class="row mt-1">
+              <button id="settings-save-profile" type="button" class="button--primary">Save profile</button>
+              <button id="settings-cancel-profile" type="button" class="button--ghost">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div class="grid">
         <label>Base font size (px)
           <input id="settings-font-size" type="range" min="12" max="24" value="16" />
@@ -207,6 +249,53 @@
       <div class="row mt-2">
         <button id="settings-save" class="button--primary">Save Settings</button>
         <button id="settings-reset" class="button--ghost">Reset</button>
+      </div>
+
+      <!-- Security controls -->
+      <hr />
+      <h3>Security</h3>
+      <p class="hint">Change your password or sign out of this session.</p>
+      <div class="grid">
+        <label>New password
+          <input id="security-new-password" type="password" placeholder="New password (min 6)" />
+        </label>
+        <label>Confirm new password
+          <input id="security-confirm-password" type="password" placeholder="Confirm new password" />
+        </label>
+        <div class="row">
+          <button id="security-change-password" class="button--primary">Change password</button>
+          <button id="security-signout" class="button--ghost">Sign out</button>
+        </div>
+      </div>
+      
+      <!-- Danger zone -->
+      <hr />
+      <h3 style="color:#b00020">Danger zone</h3>
+      <p class="hint">Irreversible actions. Back up your data before removing it.</p>
+      <div class="grid">
+        <div>
+          <div class="help">Backup / export</div>
+          <p class="hint">Download a JSON archive of your public/private profile and debate page.</p>
+          <div class="row">
+            <button id="danger-export" class="button--ghost">Export my data (JSON)</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="help">Delete data</div>
+          <p class="hint">Remove your profile and debate page from the database. This does NOT remove your Auth account.</p>
+          <div class="row">
+            <button id="danger-delete-data" class="button--danger">Delete my data</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="help">Delete account</div>
+          <p class="hint">Request account deletion. This attempts to remove your data and sign you out. Deleting the actual Auth user record requires admin/service credentials.</p>
+          <div class="row">
+            <button id="danger-delete-account" class="button--danger">Delete my account</button>
+          </div>
+        </div>
       </div>
     </section>
 

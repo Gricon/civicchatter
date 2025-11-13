@@ -16,6 +16,7 @@ const SECTION_IDS = [
   "private-profile",
   "public-profile",
   "debate-page",
+  "settings-page",
 ];
 
 function byId(id) {
@@ -394,8 +395,156 @@ async function loadMyProfile() {
         }
       }
     }
+    // Also populate the settings-page profile summary inputs (if present)
+    try {
+      const spAvatar = byId('sp-avatar');
+      const spName = byId('sp-display-name');
+      const spHandle = byId('sp-handle');
+      const spEmail = byId('sp-email');
+      const spAvatarInput = byId('sp-avatar-input');
+      const spNameInput = byId('sp-display-name-input');
+      const spHandleInput = byId('sp-handle-input');
+      const spEmailInput = byId('sp-email-input');
+      const spPhoneInput = byId('sp-phone-input');
+
+      if (spAvatar && pubRow?.avatar_url) spAvatar.src = pubRow.avatar_url;
+      if (spName) spName.textContent = pubRow?.display_name || pubRow?.handle || '—';
+      if (spHandle) spHandle.textContent = pubRow?.handle ? `@${pubRow.handle}` : '';
+      if (spEmail) spEmail.textContent = privRow?.email || '';
+
+      if (spAvatarInput) spAvatarInput.value = pubRow?.avatar_url || '';
+      if (spNameInput) spNameInput.value = pubRow?.display_name || '';
+      if (spHandleInput) spHandleInput.value = pubRow?.handle || '';
+      if (spEmailInput) spEmailInput.value = privRow?.email || '';
+      if (spPhoneInput) spPhoneInput.value = privRow?.phone || '';
+    } catch (e) {
+      // non-fatal — not all pages show settings profile
+    }
   } catch (err) {
     alertActionError("profile load", err);
+  }
+}
+
+async function handleSaveSettingsProfile() {
+  try {
+    const user = await requireUser();
+    const handle = readValue('sp-handle-input', { lowercase: true });
+    const displayName = readValue('sp-display-name-input');
+    const avatarUrl = readValue('sp-avatar-input');
+    const email = readValue('sp-email-input');
+    const phone = readValue('sp-phone-input');
+
+    if (!isValidHandle(handle)) return alert('Handle must be 3+ chars: a–z, 0–9, _ or -');
+    await ensureHandleAvailable(handle, { allowOwnerId: user.id });
+
+    const { error: pubErr } = await sb.from('profiles_public').upsert(
+      { id: user.id, handle, display_name: displayName || null, avatar_url: avatarUrl || null },
+      { onConflict: 'id' }
+    );
+    if (pubErr) throw pubErr;
+
+    const { error: privErr } = await sb.from('profiles_private').upsert(
+      { id: user.id, email: email || null, phone: phone || null },
+      { onConflict: 'id' }
+    );
+    if (privErr) throw privErr;
+
+    alert('Profile saved');
+    // refresh local UI
+    await loadMyProfile();
+    // hide edit form
+    byId('settings-profile-edit')?.classList.add('hidden');
+  } catch (err) {
+    alertActionError('save profile (settings)', err);
+  }
+}
+
+async function handleChangePassword() {
+  try {
+    const newPwd = readValue('security-new-password');
+    const confirm = readValue('security-confirm-password');
+    if (!newPwd || newPwd.length < 6) return alert('New password must be at least 6 characters');
+    if (newPwd !== confirm) return alert('Passwords do not match');
+
+    const { data, error } = await sb.auth.updateUser({ password: newPwd });
+    if (error) throw error;
+    alert('Password changed successfully');
+    // clear inputs
+    writeValue('security-new-password', '');
+    writeValue('security-confirm-password', '');
+  } catch (err) {
+    alertActionError('change password', err);
+  }
+}
+
+// Danger zone helpers
+async function handleExportData() {
+  try {
+    const user = await requireUser();
+    // Fetch the user's rows
+    const [{ data: pub }, { data: priv }, { data: deb }] = await Promise.all([
+      sb.from('profiles_public').select('*').eq('id', user.id).maybeSingle(),
+      sb.from('profiles_private').select('*').eq('id', user.id).maybeSingle(),
+      sb.from('debate_pages').select('*').eq('id', user.id).maybeSingle(),
+    ]);
+
+    const exportObj = {
+      exported_at: new Date().toISOString(),
+      user_id: user.id,
+      profiles_public: pub || null,
+      profiles_private: priv || null,
+      debate_page: deb || null,
+    };
+
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `civicchatter-backup-${user.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alertActionError('export data', err);
+  }
+}
+
+async function handleDeleteData() {
+  try {
+    if (!confirm('This will permanently delete your public & private profile and your debate page. This cannot be undone. Are you sure?')) return;
+    const user = await requireUser();
+
+    // Delete user's debate page and profiles (best-effort). RLS may block if misconfigured.
+    const res1 = await sb.from('debate_pages').delete().eq('id', user.id);
+    if (res1.error) throw res1.error;
+    const res2 = await sb.from('profiles_public').delete().eq('id', user.id);
+    if (res2.error) throw res2.error;
+    const res3 = await sb.from('profiles_private').delete().eq('id', user.id);
+    if (res3.error) throw res3.error;
+
+    alert('Your data was deleted from the database for this project. You will be signed out.');
+    await handleLogout();
+  } catch (err) {
+    alertActionError('delete data', err);
+  }
+}
+
+async function handleDeleteAccount() {
+  try {
+    if (!confirm('Delete your account? This attempts to delete your data and sign you out. It does NOT remove the Auth user record in Supabase (that requires admin credentials). Continue?')) return;
+    // First remove user data
+    await handleDeleteData();
+    // Attempt to sign out (delete of Auth user needs service role)
+    try {
+      await sb.auth.signOut();
+    } catch (e) {
+      // ignore
+    }
+    // Inform the user about final step
+    alert('Account data removed locally. To fully remove your Auth account from Supabase the project admin must delete the auth.user record (service_role). Contact the admin if you want complete account removal.');
+  } catch (err) {
+    alertActionError('delete account', err);
   }
 }
 
@@ -555,7 +704,7 @@ async function router() {
     return;
   }
 
-  const requiresAuth = hash.startsWith("#/profile") || hash.startsWith("#/d/");
+  const requiresAuth = hash.startsWith("#/profile") || hash.startsWith("#/d/") || hash.startsWith("#/settings");
   if (!isAuthed && requiresAuth) {
     window.location.hash = "#/login";
     return;
@@ -576,6 +725,13 @@ async function router() {
   if (hash.startsWith("#/profile")) {
     await loadMyProfile();
     showSection("private-profile");
+    return;
+  }
+
+  if (hash.startsWith("#/settings")) {
+    // ensure profile + settings are loaded
+    await loadMyProfile();
+    showSection("settings-page");
     return;
   }
 
@@ -648,6 +804,34 @@ function attachEventListeners() {
   });
   byId('settings-save')?.addEventListener('click', handleSaveSettings);
   byId('settings-reset')?.addEventListener('click', handleResetSettings);
+  // settings profile inline edit handlers
+  byId('settings-edit-profile')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const form = byId('settings-profile-edit');
+    if (!form) return;
+    form.classList.toggle('hidden');
+  });
+  byId('settings-cancel-profile')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const form = byId('settings-profile-edit');
+    if (form) form.classList.add('hidden');
+  });
+  byId('settings-save-profile')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleSaveSettingsProfile();
+  });
+  byId('security-change-password')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleChangePassword();
+  });
+  byId('security-signout')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleLogout();
+  });
+  // Danger zone handlers
+  byId('danger-export')?.addEventListener('click', (e) => { e.preventDefault(); handleExportData(); });
+  byId('danger-delete-data')?.addEventListener('click', (e) => { e.preventDefault(); handleDeleteData(); });
+  byId('danger-delete-account')?.addEventListener('click', (e) => { e.preventDefault(); handleDeleteAccount(); });
   // live preview controls
   const fontRange = byId('settings-font-size');
   const fontVal = byId('settings-font-size-val');

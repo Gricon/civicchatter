@@ -90,6 +90,9 @@ $$ language plpgsql security definer;
 -- Create the trigger on auth.users
 -- You may need to run both statements in the same SQL execution block in Supabase.
 
+-- Make trigger creation idempotent: drop if exists, then create.
+drop trigger if exists auth_user_created on auth.users;
+
 create trigger auth_user_created
   after insert on auth.users
   for each row
