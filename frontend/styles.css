@@ -79,7 +79,7 @@ header {
   top: 0;
   z-index: 10;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 1rem 2rem;
   /* patriotic gradient header */
@@ -97,6 +97,14 @@ header h1 {
   display: flex;
   gap: 1.5rem;
   align-items: center;
+  /* Center the nav horizontally at the top of the header */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 50%;
+  transform-origin: center top;
+  /* keep it visually near the top */
+  margin-top: -0.5rem;
 }
 
 #nav.hidden {
@@ -417,7 +425,10 @@ hr.flag {
     font-size: 1.25rem;
   }
   
+  /* On small screens the nav should flow naturally below the title */
   #nav {
+    position: static;
+    transform: none;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.75rem;

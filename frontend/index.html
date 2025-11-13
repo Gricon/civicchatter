@@ -12,16 +12,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header>
     <h1>Civic Chatter</h1>
     <nav id="nav" class="hidden">
-      <a href="#/profile">My Profile</a>
-      <a href="#/d/me">My Debates</a>
-      <a href="#" id="logout-link">Logout</a>
+      <a href="#/profile" id="nav-private-profile" class="nav-link">My Profile</a>
+      <a href="#/u/" id="nav-public-profile" class="nav-link">My Public Profile</a>
+      <a href="#/d/me" id="nav-debates" class="nav-link">Debates</a>
+      <a href="#" id="logout-link" class="logout-btn">Logout</a>
     </nav>
   </header>
 
-  <main class="container">
+  <main id="main-content" class="container">
 
     <!-- LOGIN SECTION -->
     <section id="login-section" class="card">
