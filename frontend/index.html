@@ -7,6 +7,9 @@
 
   <link rel="stylesheet" href="styles.css" />
 
+  <!-- Supabase SDK (must load BEFORE app.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- PWA (optional) -->
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#002868" />
@@ -17,28 +20,6 @@
       );
     }
   </script>
-
-  <!-- Load Supabase before app.js; defer preserves order -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js" defer></script>
-
-  <style>
-    /* tiny in-page debug console */
-    #cc-debug {
-      position: fixed; bottom: 8px; left: 8px; right: 8px;
-      max-height: 35vh; overflow:auto; background: #0f172a; color:#e5e7eb;
-      font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
-      padding: .5rem .75rem; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.35);
-      display: none; z-index: 9999;
-    }
-    #cc-debug b { color:#93c5fd; }
-    #cc-debug .ok { color:#86efac; }
-    #cc-debug .err { color:#fca5a5; }
-    #cc-debug .muted { color:#94a3b8; }
-    #cc-debug .row { display:flex; gap:.5rem; align-items:center; margin-bottom:.25rem;}
-    #cc-debug .btn { padding:.25rem .5rem; border-radius:6px; border:1px solid #334155; background:#1f2937; color:#e5e7eb; cursor:pointer;}
-    #cc-debug .btn:hover { background:#111827; }
-  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -67,11 +48,9 @@
       </label>
 
       <div class="row">
-        <!-- inline fallback onclicks as a safety net -->
-        <button id="btn-login" type="button" class="button--primary"
-                onclick="window.__onLogin && window.__onLogin(event)">Sign In</button>
-        <button id="go-signup" type="button" class="button--ghost"
-                onclick="location.hash='#/signup'">Create account</button>
+        <!-- direct global function calls -->
+        <button id="btn-login" type="button" class="button--primary" onclick="ccLogin()">Sign In</button>
+        <button id="go-signup" type="button" class="button--ghost" onclick="showSignup()">Create account</button>
       </div>
     </section>
 
@@ -104,10 +83,8 @@
       </label>
 
       <div class="row">
-        <button id="btn-signup" type="button" class="button--primary"
-                onclick="window.__onSignup && window.__onSignup(event)">Create Account</button>
-        <button id="go-login" type="button" class="button--ghost"
-                onclick="location.hash='#/login'">Back to login</button>
+        <button id="btn-signup" type="button" class="button--primary" onclick="ccSignup()">Create Account</button>
+        <button id="go-login" type="button" class="button--ghost" onclick="showLogin()">Back to login</button>
       </div>
     </section>
 
@@ -143,8 +120,7 @@
       </div>
 
       <div class="row">
-        <button id="save-profile" type="button"
-                onclick="window.__onSaveProfile && window.__onSaveProfile(event)">Save Profile</button>
+        <button id="save-profile" type="button" onclick="ccSaveProfile()">Save Profile</button>
         <a id="public-link" class="link" href="#">View Public Page</a>
       </div>
     </section>
@@ -169,17 +145,12 @@
       <div id="deb-content" style="margin-top:1rem;"></div>
     </section>
 
+    <!-- Tiny text to remind us -->
+    <p class="hint center">If something breaks, open DevTools → Console.</p>
+
   </main>
 
-  <!-- Minimal in-page debug console -->
-  <div id="cc-debug">
-    <div class="row">
-      <button class="btn" onclick="this.parentNode.parentNode.style.display='none'">Hide</button>
-      <button class="btn" onclick="window.__ccClearDebug()">Clear</button>
-      <button class="btn" onclick="window.__ccSelfTest()">Self-test</button>
-      <span class="muted">Tip: go to <b>#/debug</b> to auto-open</span>
-    </div>
-    <div id="cc-debug-log"></div>
-  </div>
+  <!-- Your app logic, AFTER DOM and Supabase SDK -->
+  <script src="app.js"></script>
 </body>
 </html>

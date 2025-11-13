@@ -1,358 +1,342 @@
 /* ===========================
    Civic Chatter — app.js
+   (minimal, noisy version)
    =========================== */
 
-/* ---------- Supabase ---------- */
+alert("Civic Chatter JS loaded"); // remove later once it's working
+
+// ---- Supabase init ----
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
-const EMAIL_REDIRECT_URL = "https://civicchatter.netlify.app/auth-callback.html";
 
-if (!window.supabase) { alert("Supabase SDK missing"); throw new Error("Supabase SDK missing"); }
+if (!window.supabase) {
+  alert("Supabase SDK missing (window.supabase is undefined)");
+  throw new Error("Supabase SDK missing");
+}
+
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log("Supabase client created:", sb);
 
-/* ---------- Debug console ---------- */
-const dbgBox = document.getElementById("cc-debug");
-const dbgLog = document.getElementById("cc-debug-log");
-function log(...args){ if(!dbgLog) return; const line=document.createElement("div"); line.innerHTML=args.map(a => typeof a==='string'?a:(`<pre>${escapeHtml(JSON.stringify(a,null,2))}</pre>`)).join(' '); dbgLog.appendChild(line); dbgLog.scrollTop=dbgLog.scrollHeight; }
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-window.__ccClearDebug = () => { if(dbgLog) dbgLog.innerHTML=''; };
-window.__ccSelfTest = async () => {
-  dbgBox.style.display='block';
-  log("<b>Self-test</b>");
-  try {
-    log('SDK present:', !!window.supabase);
-    const g = await sb.auth.getSession();
-    log('Session:', g.data?.session ? "<span class='ok'>yes</span>" : "<span class='err'>no</span>");
-    const ping = await fetch(`${SUPABASE_URL}/auth/v1/health`).then(r=>r.ok);
-    log('Auth health:', ping ? "<span class='ok'>ok</span>" : "<span class='err'>fail</span>");
-    const probe = await sb.from('profiles_public').select('id').limit(1);
-    log('DB probe error:', probe.error ? `<span class='err'>${probe.error.message}</span>` : "<span class='ok'>none</span>");
-  } catch(e){ log("<span class='err'>Self-test failed:</span>", e?.message || e); }
-};
-
-/* Auto-open debug panel if route is #/debug */
-if (location.hash === "#/debug" && dbgBox) dbgBox.style.display = "block";
-
-/* ---------- Elements ---------- */
-const els = {
-  nav: document.getElementById("nav"),
-  login: document.getElementById("login-section"),
-  signup: document.getElementById("signup-section"),
-  priv: document.getElementById("private-profile"),
-  pub: document.getElementById("public-profile"),
-  debate: document.getElementById("debate-page"),
-  loginUsername: document.getElementById("login-username"),
-  loginPassword: document.getElementById("login-password"),
-  signupName: document.getElementById("signup-name"),
-  signupHandle: document.getElementById("signup-handle"),
-  signupEmail: document.getElementById("signup-email"),
-  signupPassword: document.getElementById("signup-password"),
-  signupPhone: document.getElementById("signup-phone"),
-  signupAddress: document.getElementById("signup-address"),
-  signupPrivate: document.getElementById("signup-private"),
-  ppHandle: document.getElementById("pp-handle"),
-  ppDisplay: document.getElementById("pp-display-name"),
-  ppBio: document.getElementById("pp-bio"),
-  ppCity: document.getElementById("pp-city"),
-  ppAvatar: document.getElementById("pp-avatar-url"),
-  prEmail: document.getElementById("pr-email"),
-  prPhone: document.getElementById("pr-phone"),
-  pubAvatar: document.getElementById("pub-avatar"),
-  pubDisplay: document.getElementById("pub-display-name"),
-  pubHandle: document.getElementById("pub-handle"),
-  pubCity: document.getElementById("pub-city"),
-  pubBio: document.getElementById("pub-bio"),
-  debTitle: document.getElementById("deb-title"),
-  debDesc: document.getElementById("deb-desc"),
-  debContent: document.getElementById("deb-content"),
-};
-
-/* ---------- Utils ---------- */
-const isValidHandle = (h) => /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
-function showOnly(...toShow){
-  [els.login, els.signup, els.priv, els.pub, els.debate].forEach(s => s?.classList.add("hidden"));
-  toShow.forEach(s => s?.classList.remove("hidden"));
-}
-async function handleAvailable(handle){
-  const { data, error } = await sb.from("profiles_public").select("id").eq("handle",(handle||"").toLowerCase()).maybeSingle();
-  if (error && error.code !== "PGRST116") log("<span class='err'>handle check:</span>", error.message);
-  return !data;
-}
-async function ensureSession(email,password){
-  const cur = await sb.auth.getSession();
-  if (cur.data?.session) return cur.data.session;
-  if (email && password) {
-    const r = await sb.auth.signInWithPassword({ email, password });
-    if (!r.error) return r.data.session;
-  }
-  return null;
-}
-function withBusyById(id, fn){
-  return async (...args)=>{
-    const btn = document.getElementById(id);
-    const orig = btn?.textContent;
-    if (btn){ btn.disabled=true; btn.textContent = (btn.dataset.busyLabel||"Working…"); }
-    try { return await fn(...args); }
-    finally { if (btn){ btn.disabled=false; btn.textContent = orig; } }
-  };
+// ---- helpers ----
+function isValidHandle(h) {
+  return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
 }
 
-/* ---------- Router ---------- */
-async function router(){
-  const { data:{ session } } = await sb.auth.getSession();
-  els.nav?.classList.toggle("hidden", !session);
-
-  const hash = location.hash || "#/login";
-  if (hash === "#/debug" && dbgBox) dbgBox.style.display='block';
-
-  if (hash.startsWith("#/auth-callback")){
-    const { data:{ session: s } } = await sb.auth.getSession();
-    location.hash = s ? "#/profile" : "#/login";
-    return;
-  }
-
-  if (session && (hash === "#/login" || hash.startsWith("#/signup"))){
-    location.hash = "#/profile"; return;
-  }
-
-  if (hash.startsWith("#/signup")) { showOnly(els.signup); return; }
-
-  if (hash.startsWith("#/u/")){
-    const h = hash.split("#/u/")[1]?.toLowerCase(); await showPublicProfile(h); return;
-  }
-
-  if (hash.startsWith("#/d/")){
-    const h = hash.split("#/d/")[1]?.toLowerCase();
-    if (h === "me"){
-      if (!session) return (location.hash="#/login");
-      const me = (await sb.auth.getUser()).data.user;
-      const { data: row } = await sb.from("profiles_public").select("handle").eq("id", me.id).maybeSingle();
-      await showDebatePage(row?.handle); return;
-    }
-    await showDebatePage(h); return;
-  }
-
-  if (hash === "#/profile"){
-    if (!session){ location.hash="#/login"; return; }
-    await loadMyProfile(); showOnly(els.priv); return;
-  }
-
-  showOnly(els.login);
-}
-
-/* ---------- Auth ---------- */
-const login = withBusyById("btn-login", async function(){
-  const uname = (els.loginUsername.value||"").trim();
-  const password = els.loginPassword.value;
-  if (!uname || !password) return alert("Enter username and password");
-
-  let email = null;
-  if (uname.includes("@")) {
-    email = uname;
-  } else {
-    const { data: pubRow, error: pubErr } =
-      await sb.from("profiles_public").select("id").eq("handle", uname.toLowerCase()).maybeSingle();
-    if (pubErr){ log("<span class='err'>lookup handle:</span>", pubErr.message); return alert("Could not look up handle"); }
-    if (!pubRow?.id) return alert("Handle not found");
-
-    const { data: privRow, error: privErr } =
-      await sb.from("profiles_private").select("email").eq("id", pubRow.id).maybeSingle();
-    if (privErr){ log("<span class='err'>resolve email:</span>", privErr.message); return alert("Could not resolve email"); }
-    if (!privRow?.email) return alert("No email on file for this user");
-    email = privRow.email;
-  }
-
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) { log("<span class='err'>signIn:</span>", error.message); throw error; }
-
-  location.hash = "#/profile";
-});
-
-const signup = withBusyById("btn-signup", async function(){
-  const name = els.signupName.value.trim();
-  const handle = els.signupHandle.value.trim().toLowerCase();
-  const email = els.signupEmail.value.trim();
-  const password = els.signupPassword.value;
-  const phone = els.signupPhone.value.trim();
-  const isPrivate = !!els.signupPrivate.checked;
-
-  if (!name) return alert("Enter your name");
-  if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
-  if (!(await handleAvailable(handle))) return alert("Handle is taken");
-  if (!email || !password) return alert("Email & password required");
-
-  log("<b>Signup:</b>", {email, handle});
-
-  const { data: sign, error: signErr } = await sb.auth.signUp({
-    email, password, options: { emailRedirectTo: EMAIL_REDIRECT_URL }
+function showSection(id) {
+  const ids = ["login-section", "signup-section", "private-profile", "public-profile", "debate-page"];
+  ids.forEach(secId => {
+    const el = document.getElementById(secId);
+    if (!el) return;
+    if (secId === id) el.classList.remove("hidden");
+    else el.classList.add("hidden");
   });
-  if (signErr){ log("<span class='err'>signUp:</span>", signErr.message); throw signErr; }
-
-  let session = sign.session || (await ensureSession(email, password));
-  if (!session) {
-    alert("Account created. Check your email to confirm, then sign in.");
-    location.hash = "#/login";
-    return;
-  }
-
-  const userId = session.user.id;
-
-  // Public profile
-  const up1 = await sb.from("profiles_public").upsert({
-    id: userId, handle, display_name: name, is_private: isPrivate, is_searchable: !isPrivate
-  }, { onConflict: "id" });
-  if (up1.error){ log("<span class='err'>profiles_public:</span>", up1.error.message); throw up1.error; }
-
-  // Private profile (no 'address' column here to avoid schema mismatch)
-  const up2 = await sb.from("profiles_private").upsert({
-    id: userId, email, phone: phone || null, preferred_contact: phone ? "sms" : "email"
-  }, { onConflict: "id" });
-  if (up2.error){ log("<span class='err'>profiles_private:</span>", up2.error.message); throw up2.error; }
-
-  // Debate page
-  const up3 = await sb.from("debate_pages").upsert({
-    id: userId, handle, title: `${name || handle}'s Debates`, description: "Debate topics and positions."
-  }, { onConflict: "id" });
-  if (up3.error){ log("<span class='err'>debate_pages:</span>", up3.error.message); throw up3.error; }
-
-  alert("Account ready!");
-  location.hash = isPrivate ? "#/profile" : `#/u/${handle}`;
-});
-
-async function logout(e){ e?.preventDefault?.(); await sb.auth.signOut(); location.hash="#/login"; }
-
-/* ---------- Private profile ---------- */
-async function loadMyProfile(){
-  const { data:{ user } } = await sb.auth.getUser(); if(!user) return;
-
-  const pub = await sb.from("profiles_public")
-    .select("handle, display_name, bio, city, avatar_url, is_private")
-    .eq("id", user.id).maybeSingle();
-  if (!pub.error && pub.data){
-    els.ppHandle.value = pub.data.handle || "";
-    els.ppDisplay.value = pub.data.display_name || "";
-    els.ppBio.value    = pub.data.bio || "";
-    els.ppCity.value   = pub.data.city || "";
-    els.ppAvatar.value = pub.data.avatar_url || "";
-  }
-
-  const priv = await sb.from("profiles_private")
-    .select("email, phone").eq("id", user.id).maybeSingle();
-  if (!priv.error && priv.data){
-    els.prEmail.value = priv.data.email || "";
-    els.prPhone.value = priv.data.phone || "";
-  }
-
-  const link = document.getElementById("public-link");
-  if (link) link.href = `#/u/${(els.ppHandle.value||"").toLowerCase()}`;
 }
 
-async function saveProfile(){
-  try{
-    const { data:{ user } } = await sb.auth.getUser(); if (!user) return alert("Not signed in");
-    const handle = (els.ppHandle.value||"").toLowerCase();
+// simple navigation helpers for buttons
+function showSignup() { showSection("signup-section"); }
+function showLogin()  { showSection("login-section"); }
 
-    const u1 = await sb.from("profiles_public").upsert({
-      id:user.id, handle, display_name: els.ppDisplay.value||null,
-      bio: els.ppBio.value||null, city: els.ppCity.value||null, avatar_url: els.ppAvatar.value||null,
-    }, { onConflict:"id" });
-    if (u1.error) throw u1.error;
+// expose globally (used by HTML onclick)
+window.showSignup = showSignup;
+window.showLogin  = showLogin;
 
-    const u2 = await sb.from("profiles_private").upsert({
-      id:user.id, email: els.prEmail.value||null, phone: els.prPhone.value||null,
-    }, { onConflict:"id" });
-    if (u2.error) throw u2.error;
+// ---- SIGNUP ----
+async function ccSignup() {
+  console.log("ccSignup clicked");
+  try {
+    const name   = document.getElementById("signup-name").value.trim();
+    const handle = document.getElementById("signup-handle").value.trim().toLowerCase();
+    const email  = document.getElementById("signup-email").value.trim();
+    const phone  = document.getElementById("signup-phone").value.trim();
+    const passwd = document.getElementById("signup-password").value;
+    const addr   = document.getElementById("signup-address").value.trim();
+    const isPriv = document.getElementById("signup-private").checked;
+
+    console.log("Signup form data:", { name, handle, email, phone, addr, isPriv });
+
+    if (!name)  return alert("Enter your name");
+    if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
+    if (!email || !passwd) return alert("Email & password required");
+
+    // check handle availability
+    const { data: existing, error: handleErr } = await sb
+      .from("profiles_public")
+      .select("id")
+      .eq("handle", handle)
+      .maybeSingle();
+
+    if (handleErr && handleErr.code !== "PGRST116") {
+      console.error("Handle check error:", handleErr);
+      alert("Error checking handle: " + handleErr.message);
+      return;
+    }
+
+    if (existing) {
+      return alert("Handle is already taken");
+    }
+
+    console.log("Calling auth.signUp...");
+    const { data: signData, error: signError } = await sb.auth.signUp({
+      email,
+      password: passwd,
+      // if you re-enable confirmations later, you can add:
+      // options: { emailRedirectTo: "https://civicchatter.netlify.app/auth-callback.html" },
+    });
+
+    console.log("signUp result:", { signData, signError });
+
+    if (signError) {
+      alert("Signup error: " + signError.message);
+      return;
+    }
+
+    // email confirmations OFF → we should have a session now
+    const user = signData.user;
+    if (!user) {
+      alert("Signup succeeded but no user returned. Check Supabase Auth settings.");
+      return;
+    }
+
+    alert("Auth user created! Now writing profile rows…");
+    console.log("New user id:", user.id);
+
+    const userId = user.id;
+
+    // --- Public profile ---
+    const { error: pubErr } = await sb.from("profiles_public").upsert(
+      {
+        id: userId,
+        handle,
+        display_name: name,
+        is_private: isPriv,
+        is_searchable: !isPriv
+      },
+      { onConflict: "id" }
+    );
+    console.log("profiles_public upsert error:", pubErr);
+    if (pubErr) {
+      alert("Error creating public profile: " + pubErr.message);
+      return;
+    }
+
+    // --- Private profile ---
+    const { error: privErr } = await sb.from("profiles_private").upsert(
+      {
+        id: userId,
+        email,
+        phone: phone || null,
+        preferred_contact: phone ? "sms" : "email",
+        // NOTE: I'm NOT inserting "address" here in case your table
+        // doesn't have that column yet. We can add it later once schema matches.
+      },
+      { onConflict: "id" }
+    );
+    console.log("profiles_private upsert error:", privErr);
+    if (privErr) {
+      alert("Error creating private profile: " + privErr.message);
+      return;
+    }
+
+    // --- Debate page ---
+    const { error: debErr } = await sb.from("debate_pages").upsert(
+      {
+        id: userId,
+        handle,
+        title: `${name || handle}'s Debates`,
+        description: "Debate topics and positions.",
+      },
+      { onConflict: "id" }
+    );
+    console.log("debate_pages upsert error:", debErr);
+    if (debErr) {
+      alert("Error creating debate page: " + debErr.message);
+      return;
+    }
+
+    alert("Account and pages created successfully!");
+    // Optionally jump to profile:
+    showSection("private-profile");
+  } catch (err) {
+    console.error("ccSignup error:", err);
+    alert("Unexpected signup error: " + (err?.message || err));
+  }
+}
+window.ccSignup = ccSignup; // make global
+
+// ---- LOGIN ----
+async function ccLogin() {
+  console.log("ccLogin clicked");
+  try {
+    const uname = document.getElementById("login-username").value.trim();
+    const passwd = document.getElementById("login-password").value;
+
+    if (!uname || !passwd) {
+      return alert("Enter username/email and password");
+    }
+
+    let email = null;
+    if (uname.includes("@")) {
+      email = uname;
+    } else {
+      // treat uname as handle
+      const { data: pubRow, error: pubErr } = await sb
+        .from("profiles_public")
+        .select("id")
+        .eq("handle", uname.toLowerCase())
+        .maybeSingle();
+
+      console.log("Lookup handle result:", { pubRow, pubErr });
+
+      if (pubErr) {
+        alert("Error looking up handle: " + pubErr.message);
+        return;
+      }
+      if (!pubRow?.id) {
+        alert("Handle not found");
+        return;
+      }
+
+      const { data: privRow, error: privErr } = await sb
+        .from("profiles_private")
+        .select("email")
+        .eq("id", pubRow.id)
+        .maybeSingle();
+
+      console.log("Resolve email result:", { privRow, privErr });
+
+      if (privErr) {
+        alert("Error resolving email: " + privErr.message);
+        return;
+      }
+      if (!privRow?.email) {
+        alert("No email on file for this user");
+        return;
+      }
+      email = privRow.email;
+    }
+
+    console.log("Signing in with email:", email);
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: passwd });
+    console.log("signIn result:", { data, error });
+
+    if (error) {
+      alert("Login error: " + error.message);
+      return;
+    }
+
+    alert("Login OK!");
+    showSection("private-profile");
+    await loadMyProfile();
+  } catch (err) {
+    console.error("ccLogin error:", err);
+    alert("Unexpected login error: " + (err?.message || err));
+  }
+}
+window.ccLogin = ccLogin;
+
+// ---- LOAD MY PROFILE ----
+async function loadMyProfile() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    console.log("loadMyProfile user:", user);
+    if (!user) {
+      alert("No logged-in user");
+      return;
+    }
+
+    const { data: pubRow, error: pubErr } = await sb
+      .from("profiles_public")
+      .select("handle, display_name, bio, city, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    console.log("Public profile row:", { pubRow, pubErr });
+
+    if (!pubErr && pubRow) {
+      document.getElementById("pp-handle").value        = pubRow.handle || "";
+      document.getElementById("pp-display-name").value  = pubRow.display_name || "";
+      document.getElementById("pp-bio").value           = pubRow.bio || "";
+      document.getElementById("pp-city").value          = pubRow.city || "";
+      document.getElementById("pp-avatar-url").value    = pubRow.avatar_url || "";
+
+      const link = document.getElementById("public-link");
+      if (link && pubRow.handle) link.href = `#/u/${pubRow.handle.toLowerCase()}`;
+    }
+
+    const { data: privRow, error: privErr } = await sb
+      .from("profiles_private")
+      .select("email, phone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    console.log("Private profile row:", { privRow, privErr });
+
+    if (!privErr && privRow) {
+      document.getElementById("pr-email").value = privRow.email || "";
+      document.getElementById("pr-phone").value = privRow.phone || "";
+    }
+  } catch (err) {
+    console.error("loadMyProfile error:", err);
+  }
+}
+
+// ---- SAVE PROFILE (optional; can be expanded later) ----
+async function ccSaveProfile() {
+  console.log("ccSaveProfile clicked");
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) {
+      alert("Not signed in");
+      return;
+    }
+
+    const handle      = document.getElementById("pp-handle").value.trim().toLowerCase();
+    const displayName = document.getElementById("pp-display-name").value.trim();
+    const bio         = document.getElementById("pp-bio").value.trim();
+    const city        = document.getElementById("pp-city").value.trim();
+    const avatarUrl   = document.getElementById("pp-avatar-url").value.trim();
+    const email       = document.getElementById("pr-email").value.trim();
+    const phone       = document.getElementById("pr-phone").value.trim();
+
+    const { error: pubErr } = await sb.from("profiles_public").upsert(
+      {
+        id: user.id,
+        handle,
+        display_name: displayName || null,
+        bio: bio || null,
+        city: city || null,
+        avatar_url: avatarUrl || null,
+      },
+      { onConflict: "id" }
+    );
+    console.log("profiles_public save error:", pubErr);
+    if (pubErr) {
+      alert("Error saving public profile: " + pubErr.message);
+      return;
+    }
+
+    const { error: privErr } = await sb.from("profiles_private").upsert(
+      {
+        id: user.id,
+        email: email || null,
+        phone: phone || null,
+      },
+      { onConflict: "id" }
+    );
+    console.log("profiles_private save error:", privErr);
+    if (privErr) {
+      alert("Error saving private profile: " + privErr.message);
+      return;
+    }
 
     alert("Profile saved");
-    const link = document.getElementById("public-link");
-    if (link) link.href = `#/u/${handle}`;
-  } catch(e){
-    log("<span class='err'>saveProfile:</span>", e?.message||e);
-    alert("Save failed: " + (e?.message || e));
+  } catch (err) {
+    console.error("ccSaveProfile error:", err);
+    alert("Unexpected save error: " + (err?.message || err));
   }
 }
+window.ccSaveProfile = ccSaveProfile;
 
-/* ---------- Public profile ---------- */
-async function showPublicProfile(handle){
-  showOnly(els.pub);
-  if (!handle){
-    els.pubDisplay.textContent="Profile not found"; els.pubHandle.textContent="";
-    els.pubBio.textContent=""; els.pubCity.textContent=""; els.pubAvatar?.removeAttribute("src");
-    return;
-  }
-  const { data:row, error } = await sb.from("profiles_public")
-    .select("display_name, handle, bio, city, avatar_url, is_private, is_searchable")
-    .eq("handle", handle).maybeSingle();
-  if (!row || error){
-    els.pubDisplay.textContent="Profile not found"; els.pubHandle.textContent="";
-    els.pubBio.textContent=""; els.pubCity.textContent=""; els.pubAvatar?.removeAttribute("src");
-    return;
-  }
-  els.pubDisplay.textContent = row.display_name || row.handle;
-  els.pubHandle.textContent  = `@${row.handle}`;
-  els.pubBio.textContent     = row.bio || "";
-  els.pubCity.textContent    = row.city || "";
-  if (row.avatar_url) els.pubAvatar.src = row.avatar_url; else els.pubAvatar?.removeAttribute("src");
-}
-
-/* ---------- Debate page ---------- */
-async function showDebatePage(handle){
-  showOnly(els.debate);
-  if (!handle){
-    els.debTitle.textContent="Debates"; els.debDesc.textContent="No handle given."; els.debContent.innerHTML="";
-    return;
-  }
-  const { data:deb, error } = await sb.from("debate_pages")
-    .select("title, description, is_public, handle").eq("handle", handle).maybeSingle();
-  if (!deb || error){
-    els.debTitle.textContent="Debate page not found"; els.debDesc.textContent=""; els.debContent.innerHTML="";
-    return;
-  }
-  els.debTitle.textContent = deb.title || `@${deb.handle} · Debates`;
-  els.debDesc.textContent  = deb.description || (deb.is_public ? "Public debates" : "Private (hidden) debates");
-  els.debContent.innerHTML = '<p class="hint">Threads coming soon.</p>';
-}
-
-/* ---------- Robust click delegation + boot ---------- */
-window.addEventListener("error", (e) => { log("<span class='err'>JS error:</span>", e.message); });
-
-function delegateClicks(){
-  document.addEventListener("click", (e) => {
-    const t = (e.target && e.target.closest) ? e.target.closest("button,a") : e.target;
-    if (!t || !t.id) return;
-
-    if (t.id === "btn-login"){ e.preventDefault(); window.__onLogin(e); }
-    if (t.id === "btn-signup"){ e.preventDefault(); window.__onSignup(e); }
-    if (t.id === "go-signup"){ e.preventDefault(); location.hash="#/signup"; }
-    if (t.id === "go-login"){ e.preventDefault(); location.hash="#/login"; }
-    if (t.id === "save-profile"){ e.preventDefault(); window.__onSaveProfile(e); }
-    if (t.id === "logout-link"){ e.preventDefault(); logout(e); }
-  });
-}
-
-function wire(){
-  // expose fallbacks for inline onclick
-  window.__onLogin = () => login();
-  window.__onSignup = () => signup();
-  window.__onSaveProfile = () => saveProfile();
-
-  // busy labels
-  const bl = document.getElementById("btn-login");
-  const bs = document.getElementById("btn-signup");
-  if (bl) bl.dataset.busyLabel="Signing in…";
-  if (bs) bs.dataset.busyLabel="Creating…";
-
-  // enter submit
-  els.loginPassword?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") document.getElementById("btn-login")?.click(); });
-  els.signupPassword?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") document.getElementById("btn-signup")?.click(); });
-
-  delegateClicks();
-  window.addEventListener("hashchange", router);
-  sb.auth.onAuthStateChange(() => router());
-
-  log("<b>Boot</b>");
-  __ccSelfTest().catch(()=>{});
-  router();
-}
-
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", wire) : wire();
+// ---- Initial view ----
+showSection("login-section");
+console.log("App JS fully loaded");
