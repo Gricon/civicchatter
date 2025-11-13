@@ -1,9 +1,11 @@
 {
   "name": "civicchatter",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create-bucket": "node scripts/create_bucket.mjs"
   },
   "keywords": [],
   "author": "",
@@ -11,7 +13,8 @@
   "description": "",
   "dependencies": {
     "@capacitor/android": "^7.4.4",
-    "@capacitor/core": "^7.4.4"
+    "@capacitor/core": "^7.4.4",
+    "@supabase/supabase-js": "^2.35.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.4",
