@@ -93,51 +93,12 @@
     <!-- PRIVATE PROFILE (Edit Mode) -->
     <section id="private-profile" class="card hidden">
       <div style="display:flex; align-items:center; justify-content:space-between;">
-        <div style="display:flex; align-items:center; gap:1rem;">
-          <img id="my-avatar-small" src="https://via.placeholder.com/48" alt="avatar" class="avatar" style="width:48px;height:48px;" />
-          <div>
-            <div id="my-real-name" style="font-weight:600;">Your Name</div>
-            <div class="hint" id="my-handle-small">@yourhandle</div>
-          </div>
-        </div>
+        <h2 class="mt-0">My Profile</h2>
         <div>
           <button id="go-to-public-profile" class="button--ghost">View public profile</button>
         </div>
       </div>
-      <hr />
-      <p class="hint">Edit your profile information below.</p>
-
-      <div class="grid">
-        <label>Handle (public @username)
-          <input id="pp-handle" type="text" placeholder="yourhandle" />
-        </label>
-
-        <label>Display Name
-          <input id="pp-display-name" type="text" placeholder="Your Name" />
-        </label>
-
-        <label>Bio
-          <textarea id="pp-bio" rows="3" placeholder="Tell others about yourself"></textarea>
-        </label>
-
-        <label>City
-          <input id="pp-city" type="text" placeholder="e.g. Manila" />
-        </label>
-
-        <label>Avatar URL
-          <input id="pp-avatar-url" type="url" placeholder="https://..." />
-        </label>
-
-        <label>Email
-          <input id="pr-email" type="email" placeholder="you@example.com" />
-        </label>
-
-        <label>Phone
-          <input id="pr-phone" type="tel" placeholder="+63..." />
-        </label>
-      </div>
-
-      <button id="save-profile" type="button" class="button--primary">Save Profile</button>
+      <p class="hint">Profile information is now managed in Settings. Use Settings to edit your public/private profile. You can create posts below.</p>
 
       <!-- POSTS composer -->
       <div class="card mt-2">
