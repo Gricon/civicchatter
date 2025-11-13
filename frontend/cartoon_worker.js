@@ -108,9 +108,12 @@ self.addEventListener('message', async (ev) => {
     ctx.putImageData(outImg, 0, 0);
 
     postMessage({ id, type: 'progress', pct: 95, text: 'Finalizing' });
-    const blob = await oc.convertToBlob({ type: 'image/png', quality: 0.92 });
+  const blob = await oc.convertToBlob({ type: 'image/png', quality: 0.92 });
 
-    postMessage({ id, type: 'result', blob }, [blob]);
+  // Note: Blob is not a transferable in all browsers. Send it via structured
+  // clone without specifying a transfer list to avoid
+  // "invalid transferable" errors in some environments.
+  postMessage({ id, type: 'result', blob });
   } catch (err) {
     postMessage({ id, type: 'error', message: err?.message || String(err) });
   }
