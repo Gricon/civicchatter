@@ -4,12 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Civic Chatter</title>
+  <meta name="description" content="Civic Chatter helps neighbors coordinate, debate, and share civic updates powered by Supabase." />
+  <meta name="color-scheme" content="light dark" />
+  <meta property="og:title" content="Civic Chatter" />
+  <meta property="og:description" content="Coordinate debates, manage civic profiles, and stay engaged with your community." />
 
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+  <link rel="dns-prefetch" href="https://uoehxenaabrmuqzhxjdi.supabase.co" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://uoehxenaabrmuqzhxjdi.supabase.co" crossorigin />
+  <link rel="preload" href="styles.css" as="style" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <!-- Supabase SDK (must load BEFORE app.js) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
   <!-- PWA (optional) -->
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -17,15 +26,21 @@
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+  <noscript>
+    <style>main { display: none; }</style>
+    <div class="card center" role="alert">
+      JavaScript is required to use Civic Chatter. Please enable it in your browser settings.
+    </div>
+  </noscript>
 
   <header>
     <h1>Civic Chatter</h1>
-    <nav id="nav" class="hidden">
+    <nav id="nav" class="hidden" aria-label="Primary navigation">
       <a href="#/profile/private" class="nav-link" id="nav-private-profile">Private Profile</a>
       <a href="#/profile/public" class="nav-link" id="nav-public-profile">Public Profile</a>
       <a href="#/debates" class="nav-link" id="nav-debates">Debates</a>
       <a href="#/settings" class="nav-link" id="nav-settings">Settings</a>
-      <button type="button" class="logout-btn" id="logout-btn">Logout</button>
+      <button type="button" class="logout-btn" id="logout-btn" aria-label="Log out of Civic Chatter">Logout</button>
     </nav>
   </header>
 
@@ -49,7 +64,7 @@
         <button id="go-signup" type="button" class="button--ghost">Create account</button>
       </div>
       
-      <div style="text-align: center; margin-top: 1rem;">
+      <div class="center mt-3">
         <button id="forgot-password-btn" type="button" class="link-button">Forgot password?</button>
       </div>
     </section>
@@ -94,7 +109,7 @@
           <input id="signup-address" type="text" placeholder="Address" />
         </label>
       </div>
-      <label class="row" style="margin-top:.25rem">
+      <label class="row mt-1">
         <input id="signup-private" type="checkbox" /> Private account (not searchable)
       </label>
 
@@ -144,7 +159,7 @@
     <!-- PUBLIC PROFILE (read-only) -->
     <section class="card hidden" id="public-profile">
       <div class="public-header">
-        <img id="pub-avatar" alt="avatar" class="avatar" />
+        <img id="pub-avatar" alt="avatar" class="avatar" loading="lazy" decoding="async" />
         <div>
           <h2 id="pub-display-name" class="mt-0 mb-0"></h2>
           <p class="handle" id="pub-handle"></p>
@@ -158,7 +173,7 @@
     <section class="card hidden" id="debate-page">
       <h2 id="deb-title" class="mt-0">Debates</h2>
       <p id="deb-desc" class="hint"></p>
-      <div id="deb-content" style="margin-top:1rem;"></div>
+      <div id="deb-content" class="mt-3" aria-live="polite"></div>
     </section>
 
     <!-- SETTINGS PAGE -->
@@ -194,6 +209,6 @@
   </main>
 
   <!-- Your app logic, AFTER DOM and Supabase SDK -->
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
