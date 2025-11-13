@@ -1,226 +1,302 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Civic Chatter - Login Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 500px;
-      margin: 50px auto;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .test-box {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #002868;
-      margin-top: 0;
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #002868;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #004488;
-    }
-    .status {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 5px;
-      display: none;
-    }
-    .status.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    .status.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-    .status.info {
-      background: #d1ecf1;
-      color: #0c5460;
-      border: 1px solid #bee5eb;
-    }
-    .console-log {
-      margin-top: 20px;
-      padding: 15px;
-      background: #2d2d2d;
-      color: #00ff00;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 12px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .hint {
-      font-size: 14px;
-      color: #666;
-      margin-top: 5px;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Civic Chatter</title>
+  <meta name="description" content="Civic Chatter helps neighbors coordinate, debate, and share civic updates powered by Supabase." />
+  <meta name="color-scheme" content="light dark" />
+  <meta property="og:title" content="Civic Chatter" />
+  <meta property="og:description" content="Coordinate debates, manage civic profiles, and stay engaged with your community." />
+
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+  <link rel="dns-prefetch" href="https://uoehxenaabrmuqzhxjdi.supabase.co" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://uoehxenaabrmuqzhxjdi.supabase.co" crossorigin />
+
+  <link rel="preload" href="styles.css" as="style" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Supabase SDK (must load BEFORE app.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+
+  <!-- PWA (optional) -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#002868" />
 </head>
 <body>
-  <div class="test-box">
-    <h1>🔐 Civic Chatter Login Test</h1>
-    <p>This is a standalone test to verify login functionality.</p>
-    
-    <label>
-      Email Address
-      <input type="email" id="test-email" placeholder="your@email.com" />
-    </label>
-    
-    <label>
-      Password
-      <input type="password" id="test-password" placeholder="Your password" />
-    </label>
-    
-    <button id="test-login-btn">Test Login</button>
-    
-    <div id="status" class="status"></div>
-    
-    <div class="console-log" id="log">
-      <div>📋 Console Log (watch for errors):</div>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <noscript>
+    <style>main { display: none; }</style>
+    <div class="card center" role="alert">
+      JavaScript is required to use Civic Chatter. Please enable it in your browser settings.
     </div>
-  </div>
+  </noscript>
 
-  <script>
-    // Logging function
-    function log(message, type = 'info') {
-      const logEl = document.getElementById('log');
-      const time = new Date().toLocaleTimeString();
-      const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
-      logEl.innerHTML += `\n${time} ${emoji} ${message}`;
-      logEl.scrollTop = logEl.scrollHeight;
-      console.log(message);
-    }
+  <header>
+    <h1>Civic Chatter</h1>
+    <nav id="nav" class="hidden" aria-label="Primary navigation">
+      <a href="#" class="nav-link" id="nav-private-profile">Private Profile</a>
+      <a href="#" class="nav-link" id="nav-public-profile">Public Profile</a>
+      <a href="#" class="nav-link" id="nav-debates">Debates</a>
+      <a href="#" class="nav-link" id="nav-settings">Settings</a>
+      <button type="button" class="logout-btn" id="logout-btn" aria-label="Log out of Civic Chatter">
+        Logout
+      </button>
+    </nav>
+  </header>
 
-    // Status display
-    function showStatus(message, type = 'info') {
-      const statusEl = document.getElementById('status');
-      statusEl.className = `status ${type}`;
-      statusEl.textContent = message;
-      statusEl.style.display = 'block';
-    }
+  <main id="main" class="container">
 
-    // Initialize on load
-    window.addEventListener('DOMContentLoaded', () => {
-      log('Page loaded');
-      
-      // Check if Supabase is available
-      if (typeof window.supabase === 'undefined') {
-        log('ERROR: Supabase SDK not loaded!', 'error');
-        showStatus('❌ Supabase SDK missing. Check your internet connection.', 'error');
-        return;
-      }
-      
-      log('✅ Supabase SDK loaded');
-      
-      // Create Supabase client
-      const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
-      
-      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      log('✅ Supabase client created');
-      
-      // Check for existing session
-      sb.auth.getSession().then(({ data, error }) => {
-        if (error) {
-          log('Error checking session: ' + error.message, 'error');
-        } else if (data.session) {
-          log('✅ Already logged in as: ' + data.session.user.email, 'success');
-          showStatus('✅ Already logged in! Session exists.', 'success');
-        } else {
-          log('No existing session');
-          showStatus('Ready to test login', 'info');
-        }
-      });
-      
-      // Attach button listener
-      const loginBtn = document.getElementById('test-login-btn');
-      
-      if (!loginBtn) {
-        log('ERROR: Login button not found!', 'error');
-        showStatus('❌ Button missing from page', 'error');
-        return;
-      }
-      
-      log('✅ Login button found');
-      
-      loginBtn.addEventListener('click', async () => {
-        log('🔐 Login button clicked');
-        showStatus('Attempting login...', 'info');
-        
-        const email = document.getElementById('test-email').value.trim();
-        const password = document.getElementById('test-password').value;
-        
-        log(`Email: ${email ? email : '(empty)'}`);
-        log(`Password: ${password ? '***entered***' : '(empty)'}`);
-        
-        if (!email || !password) {
-          log('❌ Missing credentials', 'error');
-          showStatus('❌ Please enter both email and password', 'error');
-          return;
-        }
-        
-        if (!email.includes('@')) {
-          log('❌ Invalid email format', 'error');
-          showStatus('❌ Please enter a valid email address', 'error');
-          return;
-        }
-        
-        try {
-          log('📤 Sending login request to Supabase...');
-          
-          const { data, error } = await sb.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (error) {
-            log(`❌ Login failed: ${error.message}`, 'error');
-            showStatus(`❌ Login failed: ${error.message}`, 'error');
-            
-            // Give helpful hints
-            if (error.message.includes('Invalid login credentials')) {
-              log('Hint: Check your email and password are correct', 'error');
-            }
-          } else {
-            log(`✅ LOGIN SUCCESS! User: ${data.user.email}`, 'success');
-            showStatus(`✅ Login successful! Welcome ${data.user.email}`, 'success');
-            log('Session data:', 'success');
-            log(JSON.stringify(data.session, null, 2), 'success');
-          }
-        } catch (err) {
-          log(`❌ Unexpected error: ${err.message}`, 'error');
-          showStatus(`❌ Unexpected error: ${err.message}`, 'error');
-        }
-      });
-      
-      log('✅ Event listener attached');
-      log('Ready! Enter credentials and click Test Login');
-    });
-  </script>
+    <!-- LOGIN -->
+    <section id="login-section" class="card">
+      <h2 class="mt-0">Sign in</h2>
+      <p class="hint">Use your <b>handle</b> or <b>email</b> and password.</p>
+
+      <label>Username or Email
+        <input id="login-username" type="text" autocomplete="username" placeholder="yourhandle or you@example.com" />
+        <small class="hint">💡 If handle doesn't work, try your email address.</small>
+      </label>
+
+      <label>Password
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </label>
+
+      <div class="row">
+        <button id="btn-login" type="button" class="button--primary">Sign In</button>
+        <button id="go-signup" type="button" class="button--ghost">Create account</button>
+      </div>
+
+      <div style="text-align: center; margin-top: 1rem;">
+        <button id="forgot-password-btn" type="button" class="link-button">
+          Forgot password?
+        </button>
+      </div>
+    </section>
+
+    <!-- SIGNUP -->
+    <section id="signup-section" class="card hidden">
+      <h2 class="mt-0">Create account</h2>
+      <div class="grid">
+        <label>Name
+          <input id="signup-name" type="text" placeholder="Your name" />
+        </label>
+
+        <label>Handle (public @username)
+          <input id="signup-handle" type="text" placeholder="e.g. conrad" />
+          <small class="hint">3+ chars: a–z, 0–9, _ or -</small>
+        </label>
+
+        <label>Email
+          <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
+
+        <label>Phone (optional)
+          <input id="signup-phone" type="tel" placeholder="+63..." />
+        </label>
+
+        <label>Password
+          <input id="signup-password" type="password" autocomplete="new-password" placeholder="Create a password" minlength="6" />
+          <small class="hint">Minimum 6 characters</small>
+        </label>
+
+        <label>Address (optional)
+          <input id="signup-address" type="text" placeholder="Address" />
+        </label>
+      </div>
+
+      <label class="row mt-1">
+        <input id="signup-private" type="checkbox" />
+        <span>Private account (not searchable)</span>
+      </label>
+
+      <div class="row">
+        <button id="btn-signup" type="button" class="button--primary">Create Account</button>
+        <button id="go-login" type="button" class="button--ghost">Back to login</button>
+      </div>
+    </section>
+
+    <!-- FORGOT PASSWORD -->
+    <section id="forgot-password-section" class="card hidden">
+      <h2 class="mt-0">Reset Password</h2>
+      <p class="hint">
+        Enter your email address and we'll send you a password reset link.
+      </p>
+
+      <label>Email Address
+        <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com" />
+      </label>
+
+      <div class="row">
+        <button id="btn-reset-password" type="button" class="button--primary">Send Reset Link</button>
+        <button id="back-to-login" type="button" class="button--ghost">Back to login</button>
+      </div>
+    </section>
+
+    <!-- PRIVATE PROFILE -->
+    <section id="private-profile" class="card hidden">
+      <h2 class="mt-0">My Private Profile</h2>
+      <p class="hint">
+        This is your private workspace. Only you can see this page.  
+        Profile details are managed from <b>Settings</b>.
+      </p>
+
+      <div class="summary-box">
+        <h3>Welcome!</h3>
+        <p>Use the navigation above to:</p>
+        <ul>
+          <li><b>View Public Profile</b> - See how others see your profile</li>
+          <li><b>Manage Debates</b> - Create and participate in debates</li>
+          <li><b>Update Settings</b> - Edit your profile and preferences</li>
+        </ul>
+      </div>
+
+      <h3 class="mt-2">Your Notes / Plans (coming soon)</h3>
+      <p class="hint">Later, this will be where you draft posts, upload videos, or keep private notes.</p>
+    </section>
+
+    <!-- PUBLIC PROFILE -->
+    <section id="public-profile" class="card hidden">
+      <h2 class="mt-0">My Public Profile Preview</h2>
+      <p class="hint">
+        This is how your public profile will look to others.
+        Change the details in <b>Settings</b>.
+      </p>
+
+      <div class="public-header">
+        <img id="pub-avatar" alt="avatar" class="avatar" src="https://via.placeholder.com/80" loading="lazy" decoding="async" />
+        <div>
+          <h3 id="pub-display-name" class="mt-0 mb-0">Loading...</h3>
+          <p class="handle" id="pub-handle">@loading</p>
+          <p class="city" id="pub-city"></p>
+        </div>
+      </div>
+      <p id="pub-bio">Loading your bio...</p>
+
+      <h3 class="mt-2">Public Content (coming soon)</h3>
+      <p class="hint">Later, this will show your public posts, debates, and videos.</p>
+    </section>
+
+    <!-- DEBATES PAGE -->
+    <section id="debate-page" class="card hidden">
+      <h2 id="deb-title" class="mt-0">My Debates</h2>
+      <p id="deb-desc" class="hint"></p>
+      <div id="deb-content" class="mt-3" aria-live="polite">
+        <p class="hint">Debate threads will appear here in a later version.</p>
+      </div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section id="settings-page" class="card hidden">
+      <h2 class="mt-0">Settings</h2>
+
+      <!-- Profile Section -->
+      <h3>Profile Information</h3>
+      <div class="grid">
+        <label>Display Name
+          <input id="settings-name" type="text" placeholder="e.g. Conrad G." />
+        </label>
+
+        <label>Handle (public @username)
+          <input id="settings-handle" type="text" placeholder="e.g. conrad" />
+          <small class="hint">3+ chars: a–z, 0–9, _ or -</small>
+        </label>
+
+        <label>Bio
+          <textarea id="settings-bio" rows="3" placeholder="Tell others about yourself"></textarea>
+        </label>
+
+        <label>City
+          <input id="settings-city" type="text" placeholder="e.g. Manila" />
+        </label>
+
+        <label>Avatar URL
+          <input id="settings-avatar-url" type="url" placeholder="https://..." />
+        </label>
+
+        <label>Email
+          <input id="settings-email" type="email" placeholder="user@example.com" />
+        </label>
+
+        <label>Phone
+          <input id="settings-phone" type="tel" placeholder="+63..." />
+        </label>
+      </div>
+
+      <button id="settings-save-profile" type="button" class="button--primary">Save Profile</button>
+
+      <!-- Privacy & Contact Section -->
+      <h3 class="mt-2">Privacy & Contact Preferences</h3>
+      <div class="grid">
+        <label>Profile Visibility
+          <select id="settings-privacy">
+            <option value="public">Public (searchable)</option>
+            <option value="private">Private (not searchable)</option>
+          </select>
+        </label>
+
+        <label>Preferred Contact Method
+          <select id="settings-contact">
+            <option value="email">Email</option>
+            <option value="sms">SMS</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="settings-save-preferences" type="button" class="button--primary">Save Preferences</button>
+
+      <!-- Appearance Section -->
+      <h3 class="mt-2">Appearance</h3>
+      <div class="grid">
+        <label>Font Size
+          <select id="settings-font-size">
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+          </select>
+        </label>
+
+        <label>Theme
+          <select id="settings-theme">
+            <option value="system">Use system theme</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+
+        <label>Background Image URL (optional)
+          <input id="settings-bg-url" type="url" placeholder="https://example.com/background.jpg" />
+        </label>
+      </div>
+
+      <button id="settings-save-appearance" type="button" class="button--primary">Save Appearance</button>
+
+      <!-- Security Section -->
+      <h3 class="mt-2">Change Password</h3>
+      <div class="grid">
+        <label>New Password
+          <input id="settings-new-password" type="password" autocomplete="new-password" placeholder="Enter new password" minlength="6" />
+          <small class="hint">Minimum 6 characters</small>
+        </label>
+
+        <label>Confirm New Password
+          <input id="settings-new-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm new password" minlength="6" />
+        </label>
+      </div>
+
+      <button id="settings-save-password" type="button" class="button--primary">Update Password</button>
+
+      <!-- Logout -->
+      <div class="mt-3">
+        <button id="settings-logout" type="button" class="button--ghost">Logout</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- App logic -->
+  <script src="app.js" defer></script>
 </body>
 </html>
