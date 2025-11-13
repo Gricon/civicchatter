@@ -366,6 +366,12 @@ async function loadMyProfile() {
       if (publicLink && pubRow.handle) {
         publicLink.href = `#/u/${pubRow.handle.toLowerCase()}`;
       }
+      // Also update nav public profile link when we have the handle
+      const navPub = byId('nav-public-profile');
+      if (navPub) {
+        if (pubRow.handle) navPub.href = `#/u/${pubRow.handle.toLowerCase()}`;
+        else navPub.href = '#/u/';
+      }
     }
 
     const { data: privRow } = await sb
