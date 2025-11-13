@@ -455,8 +455,8 @@ async function handleCreatePost() {
     let media_type = null;
     if (fileEl && fileEl.files && fileEl.files[0]) {
       const f = fileEl.files[0];
-      const ext = f.type.split('/')[0];
-      media_type = ext; // 'image' or 'video'
+      // Store full MIME type (e.g. "image/png" or "application/pdf")
+      media_type = f.type || null;
       // upload to 'posts' bucket with filename userId/timestamp_originalname
       const { data: userData } = await sb.auth.getUser();
       const userId = userData?.user?.id;
@@ -516,10 +516,15 @@ async function loadMyPosts() {
       let html = `<div style="display:flex; justify-content:space-between;"><div style="font-weight:600;">${r.content ? escapeHtml(r.content).slice(0,100) : ''}</div><div class="hint">${created}</div></div>`;
       if (r.link) html += `<div><a href="${escapeHtml(r.link)}" target="_blank" rel="noopener">${escapeHtml(r.link)}</a></div>`;
       if (r.media_url) {
-        if (r.media_type === 'video') {
+        // media_type stores the MIME type (e.g. image/png, video/mp4, application/pdf)
+        if (r.media_type && r.media_type.startsWith && r.media_type.startsWith('video/')) {
           html += `<div class="mt-1"><video controls src="${escapeHtml(r.media_url)}" style="max-width:100%;"></video></div>`;
-        } else {
+        } else if (r.media_type && r.media_type.startsWith && r.media_type.startsWith('image/')) {
           html += `<div class="mt-1"><img src="${escapeHtml(r.media_url)}" style="max-width:100%;"/></div>`;
+        } else {
+          // Generic file: show a download link
+          const filename = (r.media_url || '').split('/').pop();
+          html += `<div class="mt-1"><a href="${escapeHtml(r.media_url)}" target="_blank" rel="noopener">Download ${escapeHtml(filename || 'file')}</a></div>`;
         }
       }
       item.innerHTML = html;
