@@ -947,6 +947,46 @@ async function uploadAvatarBlobXHR(blob, filename, onProgress) {
   });
 }
 
+// Diagnostic: check whether the 'avatars' bucket exists in Supabase Storage.
+// This is best-effort: the anon key may not be allowed to list buckets and
+// the endpoint may return 401/403. We surface clear guidance either way.
+async function checkAvatarsBucket() {
+  const statusEl = byId('sp-bucket-status');
+  if (statusEl) statusEl.textContent = 'Checking…';
+  try {
+    const url = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/buckets`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+    if (res.status === 200) {
+      const data = await res.json();
+      // data is typically an array of buckets
+      const found = Array.isArray(data) ? data.some((b) => (b && (b.name === 'avatars' || b.id === 'avatars'))) : false;
+      if (found) {
+        if (statusEl) statusEl.textContent = "Bucket 'avatars' exists";
+        return true;
+      }
+      if (statusEl) statusEl.textContent = "Bucket 'avatars' not found";
+      return false;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      if (statusEl) statusEl.textContent = 'Cannot list buckets with anon key (403/401). Please verify the bucket in the Supabase dashboard.';
+      return null;
+    }
+
+    const bodyText = await res.text();
+    if (/bucket not found/i.test(bodyText)) {
+      if (statusEl) statusEl.textContent = "Bucket 'avatars' not found";
+      return false;
+    }
+
+    if (statusEl) statusEl.textContent = `Unexpected response: ${res.status} ${res.statusText}`;
+    return null;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = `Error: ${err?.message || err}`;
+    return null;
+  }
+}
+
 // UI helper: set progress (0-100) and optional text
 function setCartoonProgress(pct, text) {
   const wrap = byId('sp-cartoon-progress');
@@ -1423,6 +1463,10 @@ function attachEventListeners() {
   byId('sp-cartoonize')?.addEventListener('click', (e) => {
     e.preventDefault();
     handleCartoonizeAndUploadAvatar();
+  });
+  byId('sp-check-bucket')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    checkAvatarsBucket();
   });
   byId('security-change-password')?.addEventListener('click', (e) => {
     e.preventDefault();
