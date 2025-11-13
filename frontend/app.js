@@ -2,84 +2,40 @@
    Civic Chatter — app.js
    =========================== */
 
-// ---- Service Worker Registration (optional) ----
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
-
-// ---- Supabase init ----
+// ------------ Supabase init ------------
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
 
 let sb = null; // Supabase client
 
-// ---- Section IDs (must match HTML) ----
+// ------------ Helpers ------------
 const SECTION_IDS = [
   "login-section",
   "signup-section",
-  "forgot-password-section",
   "private-profile",
   "public-profile",
   "debate-page",
-  "settings-page",
 ];
 
-// ---- Helpers ----
-const formatError = (err) => err?.message || String(err || "Unknown error");
-
-function byId(id, { required = false } = {}) {
-  const el = document.getElementById(id);
-  if (!el && required) {
-    console.error(`Missing required DOM element #${id}`);
-  }
-  return el;
+function byId(id) {
+  return document.getElementById(id) || null;
 }
 
 function readValue(id, { lowercase = false } = {}) {
-  const el = byId(id, { required: true });
+  const el = byId(id);
   const value = (el?.value ?? "").trim();
   return lowercase ? value.toLowerCase() : value;
 }
 
 function writeValue(id, value) {
   const el = byId(id);
-  if (el && "value" in el) {
-    el.value = value ?? "";
-  }
-}
-
-async function withBusyButton(buttonId, busyText, fn) {
-  const btn = byId(buttonId, { required: true });
-  if (!btn) return fn();
-
-  const originalText = btn.textContent;
-  const originalDisabled = btn.disabled;
-  const originalAriaBusy = btn.getAttribute("aria-busy");
-
-  btn.disabled = true;
-  btn.setAttribute("aria-busy", "true");
-  if (busyText) btn.textContent = busyText;
-
-  try {
-    return await fn();
-  } finally {
-    btn.disabled = originalDisabled;
-    if (originalAriaBusy === null) btn.removeAttribute("aria-busy");
-    else btn.setAttribute("aria-busy", originalAriaBusy);
-    btn.textContent = originalText;
-  }
-}
-
-function isValidHandle(h) {
-  return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
+  if (el && "value" in el) el.value = value ?? "";
 }
 
 function showSection(id) {
   SECTION_IDS.forEach((secId) => {
-    const el = document.getElementById(secId);
+    const el = byId(secId);
     if (!el) return;
     if (secId === id) el.classList.remove("hidden");
     else el.classList.add("hidden");
@@ -96,34 +52,46 @@ function hideNav() {
   if (nav) nav.classList.add("hidden");
 }
 
-function handleActionError(action, err) {
+function setActiveNav(hash) {
+  document.querySelectorAll("#nav a.nav-link").forEach((link) => {
+    if (!link) return;
+    if (link.getAttribute("href") === hash) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+}
+
+function formatError(err) {
+  return err?.message || String(err || "Unknown error");
+}
+
+function alertActionError(action, err) {
   console.error(`${action} failed:`, err);
-  let msg = formatError(err);
+  alert(`${action} error: ${formatError(err)}`);
+}
 
-  if (msg.includes("Password should be at least")) {
-    msg = "Password must be at least 6 characters long.";
-  } else if (msg.includes("Email signups are disabled")) {
-    msg = "Email signups are currently disabled in Supabase settings.";
-  } else if (msg.includes("User already registered")) {
-    msg = "This email is already registered. Try logging in instead.";
-  } else if (msg.includes("Invalid login credentials")) {
-    msg =
-      "Invalid login credentials.\n\n" +
-      "• Check your email/handle\n" +
-      "• Check your password\n" +
-      "• Make sure you created an account\n\n" +
-      "Tip: Try using your email instead of handle.";
-  } else if (msg.includes("Handle is already taken")) {
-    msg = "That handle is already taken. Please choose another.";
-  } else if (msg.includes("Handle not found")) {
-    msg =
-      "Handle not found.\n\n" +
-      "• Check the spelling\n" +
-      "• Or log in using your email\n" +
-      "• Make sure you created an account";
+async function withBusy(btnId, busyText, fn) {
+  const btn = byId(btnId);
+  if (!btn) return fn();
+
+  const originalText = btn.textContent;
+  const originalDisabled = btn.disabled;
+
+  btn.disabled = true;
+  if (busyText) btn.textContent = busyText;
+
+  try {
+    return await fn();
+  } finally {
+    btn.disabled = originalDisabled;
+    btn.textContent = originalText;
   }
+}
 
-  alert(`${action} error: ${msg}`);
+function isValidHandle(h) {
+  return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
 }
 
 async function requireUser() {
@@ -140,27 +108,29 @@ async function ensureHandleAvailable(handle, { allowOwnerId = null } = {}) {
     .eq("handle", handle)
     .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
-    throw error;
-  }
+  // PGRST116 = no row found
+  if (error && error.code !== "PGRST116") throw error;
   if (data && data.id !== allowOwnerId) {
     throw new Error("Handle is already taken");
   }
 }
 
-async function createInitialRecords({ userId, handle, name, email, phone, isPrivate }) {
-  const upsert = async (promise, label) => {
+async function createInitialRecords({ userId, handle, name, email, phone, isPrivate, address }) {
+  const upsertOrThrow = async (promise, label) => {
     const { error } = await promise;
     if (error) throw new Error(`${label}: ${error.message}`);
   };
 
-  // public profile
-  await upsert(
+  // Public profile
+  await upsertOrThrow(
     sb.from("profiles_public").upsert(
       {
         id: userId,
         handle,
         display_name: name,
+        bio: null,
+        city: null,
+        avatar_url: null,
         is_private: isPrivate,
         is_searchable: !isPrivate,
       },
@@ -169,13 +139,14 @@ async function createInitialRecords({ userId, handle, name, email, phone, isPriv
     "public profile"
   );
 
-  // private profile
-  await upsert(
+  // Private profile
+  await upsertOrThrow(
     sb.from("profiles_private").upsert(
       {
         id: userId,
         email,
         phone: phone || null,
+        address: address || null,
         preferred_contact: phone ? "sms" : "email",
       },
       { onConflict: "id" }
@@ -183,8 +154,8 @@ async function createInitialRecords({ userId, handle, name, email, phone, isPriv
     "private profile"
   );
 
-  // debate page
-  await upsert(
+  // Debate page
+  await upsertOrThrow(
     sb.from("debate_pages").upsert(
       {
         id: userId,
@@ -199,10 +170,10 @@ async function createInitialRecords({ userId, handle, name, email, phone, isPriv
 }
 
 async function resolveEmailForLogin(identifier) {
-  // if user typed email, just use it
+  // If it looks like an email, use it directly
   if (identifier.includes("@")) return identifier;
 
-  // otherwise treat as handle → look up in DB
+  // Otherwise, treat as handle → look up email
   const handle = identifier.toLowerCase();
 
   const { data: pubRow, error: pubErr } = await sb
@@ -226,75 +197,56 @@ async function resolveEmailForLogin(identifier) {
   return privRow.email;
 }
 
-// ---- Navigation helpers ----
-function goToSignup() {
-  hideNav();
-  showSection("signup-section");
-}
+// ------------ Auth actions ------------
 
-function goToLogin() {
-  hideNav();
-  showSection("login-section");
-}
-
-function goToForgotPassword() {
-  hideNav();
-  showSection("forgot-password-section");
-}
-
-// ---- Auth: Logout ----
-async function handleLogout() {
-  try {
-    const { error } = await sb.auth.signOut();
-    if (error) throw error;
-    hideNav();
-    showSection("login-section");
-  } catch (err) {
-    handleActionError("logout", err);
-  }
-}
-
-// ---- Auth: Reset password ----
-async function handleResetPassword() {
-  await withBusyButton("btn-reset-password", "Sending…", async () => {
+async function handleLogin() {
+  await withBusy("btn-login", "Signing in…", async () => {
     try {
-      const email = readValue("forgot-email");
-      if (!email || !email.includes("@")) {
-        return alert("Please enter a valid email address");
+      const identifier = readValue("login-username");
+      const password = readValue("login-password");
+
+      if (!identifier || !password) {
+        alert("Enter username/email and password");
+        return;
       }
 
-      const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password.html`,
+      const email = await resolveEmailForLogin(identifier);
+      console.log("Resolved login email:", email);
+
+      const { data, error } = await sb.auth.signInWithPassword({
+        email,
+        password,
       });
 
       if (error) throw error;
 
-      alert("Password reset email sent. Check your inbox (and spam).");
-      writeValue("forgot-email", "");
-      goToLogin();
+      console.log("Login success:", data);
+      showNav();
+      await loadMyProfile();
+      window.location.hash = "#/profile";
     } catch (err) {
-      handleActionError("password reset", err);
+      alertActionError("login", err);
     }
   });
 }
 
-// ---- Auth: Signup ----
 async function handleSignup() {
-  await withBusyButton("btn-signup", "Creating…", async () => {
+  await withBusy("btn-signup", "Creating…", async () => {
     try {
       const name = readValue("signup-name");
       const handle = readValue("signup-handle", { lowercase: true });
       const email = readValue("signup-email");
       const phone = readValue("signup-phone");
-      const password = byId("signup-password", { required: true }).value;
-      const isPrivate = !!byId("signup-private").checked;
+      const password = readValue("signup-password");
+      const address = readValue("signup-address");
+      const isPrivate = !!byId("signup-private")?.checked;
 
       if (!name) return alert("Enter your name");
       if (!isValidHandle(handle)) {
         return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
       }
       if (!email || !password) {
-        return alert("Email & password are required");
+        return alert("Email & password required");
       }
       if (password.length < 6) {
         return alert("Password must be at least 6 characters long");
@@ -302,14 +254,14 @@ async function handleSignup() {
 
       await ensureHandleAvailable(handle);
 
-      const { data, error } = await sb.auth.signUp({
+      const { data: signData, error: signErr } = await sb.auth.signUp({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (signErr) throw signErr;
 
-      const user = data.user;
+      const user = signData.user;
       if (!user) {
         throw new Error(
           "Signup succeeded but no user returned. Check Supabase Auth settings."
@@ -323,49 +275,33 @@ async function handleSignup() {
         email,
         phone,
         isPrivate,
+        address,
       });
 
       alert("Account created!");
       showNav();
-      showSection("private-profile");
       await loadMyProfile();
+      window.location.hash = "#/profile";
     } catch (err) {
-      handleActionError("signup", err);
+      alertActionError("signup", err);
     }
   });
 }
 
-// ---- Auth: Login ----
-async function handleLogin() {
-  await withBusyButton("btn-login", "Signing in…", async () => {
-    try {
-      const identifier = readValue("login-username");
-      const password = byId("login-password", { required: true }).value;
-
-      if (!identifier || !password) {
-        return alert("Enter username/email and password");
-      }
-
-      const email = await resolveEmailForLogin(identifier);
-
-      const { error } = await sb.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      alert("Login OK!");
-      showNav();
-      showSection("private-profile");
-      await loadMyProfile();
-    } catch (err) {
-      handleActionError("login", err);
-    }
-  });
+async function handleLogout() {
+  try {
+    const { error } = await sb.auth.signOut();
+    if (error) throw error;
+    hideNav();
+    showSection("login-section");
+    window.location.hash = "#/login";
+  } catch (err) {
+    alertActionError("logout", err);
+  }
 }
 
-// ---- Load My Profile ----
+// ------------ Profile loading/saving ------------
+
 async function loadMyProfile() {
   try {
     const user = await requireUser();
@@ -383,9 +319,9 @@ async function loadMyProfile() {
       writeValue("pp-city", pubRow.city || "");
       writeValue("pp-avatar-url", pubRow.avatar_url || "");
 
-      const link = byId("public-link");
-      if (link && pubRow.handle) {
-        link.href = `#/u/${pubRow.handle.toLowerCase()}`;
+      const publicLink = byId("public-link");
+      if (publicLink && pubRow.handle) {
+        publicLink.href = `#/u/${pubRow.handle.toLowerCase()}`;
       }
     }
 
@@ -400,11 +336,10 @@ async function loadMyProfile() {
       writeValue("pr-phone", privRow.phone || "");
     }
   } catch (err) {
-    handleActionError("profile load", err);
+    alertActionError("profile load", err);
   }
 }
 
-// ---- Save Profile ----
 async function handleSaveProfile() {
   try {
     const user = await requireUser();
@@ -434,7 +369,7 @@ async function handleSaveProfile() {
       },
       { onConflict: "id" }
     );
-    if (pubErr) throw new Error(pubErr.message);
+    if (pubErr) throw pubErr;
 
     const { error: privErr } = await sb.from("profiles_private").upsert(
       {
@@ -444,208 +379,217 @@ async function handleSaveProfile() {
       },
       { onConflict: "id" }
     );
-    if (privErr) throw new Error(privErr.message);
+    if (privErr) throw privErr;
 
     alert("Profile saved");
   } catch (err) {
-    handleActionError("profile save", err);
+    alertActionError("profile save", err);
   }
 }
 
-// ---- Public Profile (view) ----
-async function showPublicProfileView() {
+// ------------ Public profile view ------------
+
+async function showPublicProfileFromHash(handle) {
   try {
-    const user = await requireUser();
-
-    const { data: pubRow, error } = await sb
-      .from("profiles_public")
-      .select("handle, display_name, bio, city, avatar_url")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (pubRow) {
-      const avatar = byId("pub-avatar");
-      const displayName = byId("pub-display-name");
-      const handle = byId("pub-handle");
-      const city = byId("pub-city");
-      const bio = byId("pub-bio");
-
-      if (avatar) avatar.src = pubRow.avatar_url || "https://via.placeholder.com/80";
-      if (displayName) displayName.textContent = pubRow.display_name || "Anonymous";
-      if (handle) handle.textContent = `@${pubRow.handle}`;
-      if (city) city.textContent = pubRow.city || "";
-      if (bio) bio.textContent = pubRow.bio || "No bio yet.";
-    }
-
     showSection("public-profile");
-  } catch (err) {
-    handleActionError("public profile view", err);
-  }
-}
 
-// ---- Settings (load + save) ----
-async function loadSettings() {
-  try {
-    const user = await requireUser();
+    if (!handle) {
+      byId("pub-display-name").textContent = "Profile not found";
+      byId("pub-handle").textContent = "";
+      byId("pub-bio").textContent = "";
+      byId("pub-city").textContent = "";
+      return;
+    }
 
-    const { data: pubRow } = await sb
+    const { data: row, error } = await sb
       .from("profiles_public")
-      .select("is_private")
-      .eq("id", user.id)
+      .select("display_name, handle, bio, city, avatar_url")
+      .eq("handle", handle.toLowerCase())
       .maybeSingle();
 
-    if (pubRow) {
-      const privacySelect = byId("settings-privacy");
-      if (privacySelect) {
-        privacySelect.value = pubRow.is_private ? "private" : "public";
-      }
+    if (error || !row) {
+      byId("pub-display-name").textContent = "Profile not found";
+      byId("pub-handle").textContent = "";
+      byId("pub-bio").textContent = "";
+      byId("pub-city").textContent = "";
+      return;
     }
 
-    const { data: privRow } = await sb
-      .from("profiles_private")
-      .select("preferred_contact")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (privRow) {
-      const contactSelect = byId("settings-contact");
-      if (contactSelect) {
-        contactSelect.value = privRow.preferred_contact || "email";
-      }
+    const avatar = byId("pub-avatar");
+    if (avatar) {
+      avatar.src = row.avatar_url || "https://via.placeholder.com/80";
     }
 
-    showSection("settings-page");
+    byId("pub-display-name").textContent = row.display_name || row.handle;
+    byId("pub-handle").textContent = `@${row.handle}`;
+    byId("pub-city").textContent = row.city || "";
+    byId("pub-bio").textContent = row.bio || "No bio yet.";
   } catch (err) {
-    handleActionError("settings load", err);
+    alertActionError("public profile view", err);
   }
 }
 
-async function handleSettingsSave() {
+// ------------ Debates page ------------
+
+async function showDebatePageFromHash(handleOrMe) {
   try {
-    const user = await requireUser();
-
-    const privacySelect = byId("settings-privacy");
-    const contactSelect = byId("settings-contact");
-
-    const privacy = privacySelect?.value || "public";
-    const contact = contactSelect?.value || "email";
-
-    const isPrivate = privacy === "private";
-
-    const { error: pubErr } = await sb.from("profiles_public").upsert(
-      {
-        id: user.id,
-        is_private: isPrivate,
-        is_searchable: !isPrivate,
-      },
-      { onConflict: "id" }
-    );
-    if (pubErr) throw new Error(pubErr.message);
-
-    const { error: privErr } = await sb.from("profiles_private").upsert(
-      {
-        id: user.id,
-        preferred_contact: contact,
-      },
-      { onConflict: "id" }
-    );
-    if (privErr) throw new Error(privErr.message);
-
-    alert("Settings saved");
-  } catch (err) {
-    handleActionError("settings save", err);
-  }
-}
-
-// ---- Debates ----
-async function showDebates() {
-  try {
-    const user = await requireUser();
-
-    const { data: debateRow, error } = await sb
-      .from("debate_pages")
-      .select("title, description")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    const titleEl = byId("deb-title");
-    const descEl = byId("deb-desc");
-
-    if (titleEl) titleEl.textContent = debateRow?.title || "My Debates";
-    if (descEl) descEl.textContent = debateRow?.description || "";
-
     showSection("debate-page");
+
+    let handle = handleOrMe;
+    if (!handle || handle === "me") {
+      const user = await requireUser();
+      const { data: pubRow } = await sb
+        .from("profiles_public")
+        .select("handle")
+        .eq("id", user.id)
+        .maybeSingle();
+      handle = pubRow?.handle;
+    }
+
+    if (!handle) {
+      byId("deb-title").textContent = "Debates";
+      byId("deb-desc").textContent = "No debate page found.";
+      byId("deb-content").innerHTML = "";
+      return;
+    }
+
+    const { data: deb, error } = await sb
+      .from("debate_pages")
+      .select("title, description, handle")
+      .eq("handle", handle.toLowerCase())
+      .maybeSingle();
+
+    if (error || !deb) {
+      byId("deb-title").textContent = "Debate page not found";
+      byId("deb-desc").textContent = "";
+      byId("deb-content").innerHTML = "";
+      return;
+    }
+
+    byId("deb-title").textContent = deb.title || `@${deb.handle} · Debates`;
+    byId("deb-desc").textContent =
+      deb.description || "Debate topics and positions.";
+    byId("deb-content").innerHTML =
+      '<p class="hint">Debate threads coming soon.</p>';
   } catch (err) {
-    handleActionError("debates load", err);
+    alertActionError("debate page", err);
   }
 }
 
-// ---- Attach event listeners ----
+// ------------ Router ------------
+
+async function router() {
+  // Keep nav visibility in sync with auth session
+  const { data: sessionData } = await sb.auth.getSession();
+  const isAuthed = !!sessionData?.session;
+  if (isAuthed) showNav();
+  else hideNav();
+
+  let hash = window.location.hash;
+  if (!hash) {
+    window.location.hash = isAuthed ? "#/profile" : "#/login";
+    return;
+  }
+
+  if (isAuthed && hash === "#/login") {
+    window.location.hash = "#/profile";
+    return;
+  }
+
+  const requiresAuth = hash.startsWith("#/profile") || hash.startsWith("#/d/");
+  if (!isAuthed && requiresAuth) {
+    window.location.hash = "#/login";
+    return;
+  }
+
+  setActiveNav(hash);
+
+  if (hash.startsWith("#/signup")) {
+    showSection("signup-section");
+    return;
+  }
+
+  if (hash.startsWith("#/login")) {
+    showSection("login-section");
+    return;
+  }
+
+  if (hash.startsWith("#/profile")) {
+    await loadMyProfile();
+    showSection("private-profile");
+    return;
+  }
+
+  if (hash.startsWith("#/u/")) {
+    const handle = hash.slice("#/u/".length);
+    await showPublicProfileFromHash(handle);
+    return;
+  }
+
+  if (hash.startsWith("#/d/")) {
+    const handleOrMe = hash.slice("#/d/".length);
+    await showDebatePageFromHash(handleOrMe);
+    return;
+  }
+
+  // default route fallback – snap to the appropriate landing page
+  window.location.hash = isAuthed ? "#/profile" : "#/login";
+  return;
+}
+
+// ------------ Wire up event listeners ------------
+
 function attachEventListeners() {
-  console.log("Attaching event listeners…");
+  // Auth buttons
+  byId("btn-login")?.addEventListener("click", handleLogin);
+  byId("btn-signup")?.addEventListener("click", handleSignup);
+  byId("go-signup")?.addEventListener("click", () => {
+    window.location.hash = "#/signup";
+  });
+  byId("go-login")?.addEventListener("click", () => {
+    window.location.hash = "#/login";
+  });
 
-  // Auth
-  byId("btn-login", { required: true })?.addEventListener("click", handleLogin);
-  byId("btn-signup", { required: true })?.addEventListener("click", handleSignup);
-  byId("go-signup")?.addEventListener("click", goToSignup);
-  byId("go-login")?.addEventListener("click", goToLogin);
-
-  // Enter key for login
-  const loginPassword = byId("login-password");
-  loginPassword?.addEventListener("keydown", (e) => {
+  // Enter key on login password
+  byId("login-password")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleLogin();
     }
   });
 
-  // Forgot password
-  byId("forgot-password-btn")?.addEventListener("click", goToForgotPassword);
-  byId("btn-reset-password")?.addEventListener("click", handleResetPassword);
-  byId("back-to-login")?.addEventListener("click", goToLogin);
-
-  // Profile / settings / debates
+  // Save profile
   byId("save-profile")?.addEventListener("click", handleSaveProfile);
-  byId("settings-save")?.addEventListener("click", handleSettingsSave);
-  byId("settings-logout")?.addEventListener("click", handleLogout);
 
-  // Nav links
-  byId("nav-private-profile")?.addEventListener("click", (e) => {
+  // Nav + logout
+  byId("logout-link")?.addEventListener("click", (e) => {
     e.preventDefault();
-    showSection("private-profile");
-    loadMyProfile();
+    handleLogout();
   });
 
-  byId("nav-public-profile")?.addEventListener("click", (e) => {
+  byId("nav")?.querySelector('a[href="#/profile"]')?.addEventListener("click", (e) => {
     e.preventDefault();
-    showPublicProfileView();
+    window.location.hash = "#/profile";
   });
 
-  byId("nav-debates")?.addEventListener("click", (e) => {
+  byId("nav")?.querySelector('a[href="#/d/me"]')?.addEventListener("click", (e) => {
     e.preventDefault();
-    showDebates();
+    window.location.hash = "#/d/me";
   });
 
-  byId("nav-settings")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    loadMyProfile();
-    loadSettings();
+  // Hash routing
+  window.addEventListener("hashchange", () => {
+    router().catch((err) => console.error("router error", err));
   });
-
-  // Logout (nav)
-  byId("logout-btn")?.addEventListener("click", handleLogout);
 }
 
-// ---- Init ----
+// ------------ Init ------------
+
 function initApp() {
-  console.log("=== Civic Chatter app starting ===");
+  console.log("Civic Chatter init…");
 
   if (!window.supabase) {
-    console.error("Supabase SDK missing (window.supabase undefined)");
+    console.error("Supabase SDK missing (window.supabase is undefined)");
     alert("Supabase SDK failed to load");
     return;
   }
@@ -654,12 +598,12 @@ function initApp() {
   console.log("Supabase client created:", !!sb);
 
   attachEventListeners();
-  hideNav();
-  showSection("login-section");
-  console.log("App ready.");
+
+  // Initial route
+  router().catch((err) => console.error("Initial router error", err));
 }
 
-// Run once DOM is ready
+// DOM ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
