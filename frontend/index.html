@@ -202,7 +202,15 @@
                   <button id="sp-cartoonize" type="button" class="button--ghost">Cartoonize & Upload</button>
                   <span id="sp-cartoon-status" class="hint" style="margin-left:1rem"></span>
                 </div>
-                <div style="margin-top:.5rem;"><img id="sp-avatar-preview" src="" alt="preview" style="max-width:160px; display:none; border-radius:4px;"/></div>
+                <div style="margin-top:.5rem;">
+                  <img id="sp-avatar-preview" src="" alt="preview" style="max-width:160px; display:none; border-radius:4px;"/>
+                  <div id="sp-cartoon-progress" class="hidden" style="margin-top:.5rem;">
+                    <div style="width:100%; background:#eee; height:10px; border-radius:6px; overflow:hidden;">
+                      <div id="sp-cartoon-progress-bar" style="width:0%; height:100%; background:#4caf50; transition:width 200ms ease;"></div>
+                    </div>
+                    <div id="sp-cartoon-progress-text" class="hint" style="margin-top:.25rem;"></div>
+                  </div>
+                </div>
               </label>
               <label>Email
                 <input id="sp-email-input" type="email" />

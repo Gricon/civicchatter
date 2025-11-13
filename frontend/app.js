@@ -643,23 +643,74 @@ async function handleCartoonizeAndUploadAvatar() {
   const fileEl = byId('sp-avatar-file');
   const status = byId('sp-cartoon-status');
   const preview = byId('sp-avatar-preview');
+  const progressWrap = byId('sp-cartoon-progress');
+  const progressBar = byId('sp-cartoon-progress-bar');
+  const progressText = byId('sp-cartoon-progress-text');
   if (!fileEl || !fileEl.files || !fileEl.files[0]) return alert('Choose an image file first');
   const file = fileEl.files[0];
   try {
     if (status) { status.textContent = 'Processing…'; }
-    const dataUrl = await cartoonizeFile(file, { maxDim: 800 });
-    if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
-    const blob = dataURLToBlob(dataUrl);
+    if (progressWrap) progressWrap.classList.remove('hidden');
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = 'Starting…';
+    byId('sp-cartoonize')?.setAttribute('disabled', 'disabled');
+    // Use Web Worker cartoonizer if available for responsive processing
+    let processedBlob = null;
+    if (window.Worker) {
+      processedBlob = await new Promise((resolve, reject) => {
+        const worker = new Worker('cartoon_worker.js');
+        const id = Math.random().toString(36).slice(2);
+        worker.postMessage({ id, file, maxDim: 800 });
+        worker.onmessage = (ev) => {
+          const msg = ev.data || {};
+          if (msg.id && msg.id !== id) return;
+          if (msg.type === 'progress') {
+            const pct = Math.min(80, msg.pct || 0);
+            if (progressBar) progressBar.style.width = `${Math.round(pct * 0.8)}%`;
+            if (progressText) progressText.textContent = msg.text || '';
+          }
+          if (msg.type === 'result') {
+            resolve(msg.blob);
+            worker.terminate();
+          }
+          if (msg.type === 'error') {
+            reject(new Error(msg.message || 'Worker error'));
+            worker.terminate();
+          }
+        };
+        worker.onerror = (err) => { reject(err); worker.terminate(); };
+      });
+    } else {
+      // fallback to main-thread OpenCV processing
+      const dataUrl = await cartoonizeFile(file, { maxDim: 800 });
+      if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+      processedBlob = dataURLToBlob(dataUrl);
+    }
+
+    if (!processedBlob) throw new Error('Processing failed');
+    // show preview
+    const previewUrl = URL.createObjectURL(processedBlob);
+    if (preview) { preview.src = previewUrl; preview.style.display = 'block'; }
     // upload to storage
     const { data: userData } = await sb.auth.getUser();
     const user = userData?.user;
     if (!user) throw new Error('Not signed in');
     const filename = `${user.id}.png`;
-    const publicUrl = await uploadAvatarBlob(blob, filename);
+    if (progressBar) progressBar.style.width = '90%';
+    if (progressText) progressText.textContent = 'Uploading…';
+    // Use XHR PUT to storage endpoint so we can get upload progress events
+    const publicUrl = await uploadAvatarBlobXHR(processedBlob, filename, (uploadedPct) => {
+      // map uploadedPct (0-100) into 90..100 overall range
+      const overall = 90 + Math.round(uploadedPct * 0.1);
+      if (progressBar) progressBar.style.width = overall + '%';
+      if (progressText) progressText.textContent = `Uploading ${uploadedPct}%`;
+    });
     if (!publicUrl) throw new Error('Failed to get public URL from storage');
     // set avatar input (so saving profile will persist it too)
     writeValue('sp-avatar-input', publicUrl);
     if (status) status.textContent = 'Uploaded';
+    if (progressBar) progressBar.style.width = '100%';
+    if (progressText) progressText.textContent = 'Done';
     // auto-save the profile avatar URL (upsert private/public rows as needed)
     // we only update the public profile avatar_url here
     const { error: pubErr } = await sb.from('profiles_public').upsert({ id: user.id, avatar_url: publicUrl }, { onConflict: 'id' });
@@ -669,7 +720,58 @@ async function handleCartoonizeAndUploadAvatar() {
   } catch (err) {
     alertActionError('cartoonize upload', err);
     if (status) status.textContent = '';
+    if (progressText) progressText.textContent = '';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressWrap) progressWrap.classList.add('hidden');
+  } finally {
+    byId('sp-cartoonize')?.removeAttribute('disabled');
   }
+}
+
+// Upload using XHR to allow progress events. Uses Supabase Storage REST endpoint.
+async function uploadAvatarBlobXHR(blob, filename, onProgress) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const bucket = 'avatars';
+      const path = encodeURIComponent(filename);
+      const url = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/${bucket}/${path}`;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url, true);
+      // Supabase needs the anon key in Authorization
+      xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_ANON_KEY}`);
+      // Optional: tell Supabase to upsert
+      xhr.setRequestHeader('x-upsert', 'true');
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable && typeof onProgress === 'function') {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          onProgress(pct);
+        }
+      };
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Construct public URL (depends on bucket public settings)
+          const publicUrl = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${path}`;
+          resolve(publicUrl);
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText} ${xhr.responseText || ''}`));
+        }
+      };
+      xhr.onerror = function (e) { reject(new Error('Network error during upload')); };
+      xhr.send(blob);
+    } catch (err) { reject(err); }
+  });
+}
+
+// UI helper: set progress (0-100) and optional text
+function setCartoonProgress(pct, text) {
+  const wrap = byId('sp-cartoon-progress');
+  const bar = byId('sp-cartoon-progress-bar');
+  const txt = byId('sp-cartoon-progress-text');
+  if (!wrap || !bar) return;
+  wrap.classList.remove('hidden');
+  bar.style.width = `${pct}%`;
+  if (txt) txt.textContent = text || '';
 }
 
 async function handleSaveProfile() {
