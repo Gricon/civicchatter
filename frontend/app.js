@@ -1341,6 +1341,12 @@ function attachEventListeners() {
     window.location.hash = "#/d/me";
   });
 
+  // Ensure debates nav is wired even if the href selector doesn't match
+  byId('nav-debates')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.hash = '#/d/me';
+  });
+
   // Hash routing
   window.addEventListener("hashchange", () => {
     router().catch((err) => console.error("router error", err));
