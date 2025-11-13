@@ -2,712 +2,439 @@
    Civic Chatter — app.js
    =========================== */
 
-// ---- Service Worker Registration ----
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
-
-// ---- Supabase init ----
+/* ---------- Supabase ---------- */
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
+const EMAIL_REDIRECT_URL = "https://civicchatter.netlify.app/auth-callback.html";
 
 if (!window.supabase) {
-  alert("Supabase SDK missing (window.supabase is undefined)");
+  alert("Supabase SDK missing. Ensure the CDN loads before app.js");
   throw new Error("Supabase SDK missing");
 }
-
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ---- Helpers ----
-const SECTION_IDS = [
-  "login-section",
-  "signup-section",
-  "forgot-password-section",
-  "private-profile",
-  "public-profile",
-  "debate-page",
-  "settings-page",
-];
+/* ---------- Elements ---------- */
+const els = {
+  nav: document.getElementById("nav"),
+  // sections
+  login: document.getElementById("login-section"),
+  signup: document.getElementById("signup-section"),
+  priv: document.getElementById("private-profile"),
+  pub: document.getElementById("public-profile"),
+  debate: document.getElementById("debate-page"),
+  // login inputs
+  loginUsername: document.getElementById("login-username"),
+  loginPassword: document.getElementById("login-password"),
+  // signup inputs
+  signupName: document.getElementById("signup-name"),
+  signupHandle: document.getElementById("signup-handle"),
+  signupEmail: document.getElementById("signup-email"),
+  signupPassword: document.getElementById("signup-password"),
+  signupPhone: document.getElementById("signup-phone"),
+  signupAddress: document.getElementById("signup-address"),
+  signupPrivate: document.getElementById("signup-private"),
+  // private fields
+  ppHandle: document.getElementById("pp-handle"),
+  ppDisplay: document.getElementById("pp-display-name"),
+  ppBio: document.getElementById("pp-bio"),
+  ppCity: document.getElementById("pp-city"),
+  ppAvatar: document.getElementById("pp-avatar-url"),
+  prEmail: document.getElementById("pr-email"),
+  prPhone: document.getElementById("pr-phone"),
+  // public view
+  pubAvatar: document.getElementById("pub-avatar"),
+  pubDisplay: document.getElementById("pub-display-name"),
+  pubHandle: document.getElementById("pub-handle"),
+  pubCity: document.getElementById("pub-city"),
+  pubBio: document.getElementById("pub-bio"),
+  // debate
+  debTitle: document.getElementById("deb-title"),
+  debDesc: document.getElementById("deb-desc"),
+  debContent: document.getElementById("deb-content"),
+};
 
-const formatError = (err) => err?.message || err || "Unknown error";
+/* ---------- Utils ---------- */
+const isValidHandle = (h) => /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
 
-function byId(id) {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`Missing DOM element #${id}`);
-  return el;
+function showOnly(...toShow) {
+  [els.login, els.signup, els.priv, els.pub, els.debate].forEach(s => s?.classList.add("hidden"));
+  toShow.forEach(s => s?.classList.remove("hidden"));
 }
 
-function readValue(id, { lowercase = false } = {}) {
-  const el = byId(id);
-  const value = (el.value ?? "").trim();
-  return lowercase ? value.toLowerCase() : value;
-}
-
-function writeValue(id, value) {
-  const el = byId(id);
-  if ("value" in el) el.value = value ?? "";
-}
-
-function showSection(id) {
-  SECTION_IDS.forEach((secId) => {
-    const el = document.getElementById(secId);
-    if (!el) return;
-    if (secId === id) el.classList.remove("hidden");
-    else el.classList.add("hidden");
-  });
-}
-
-function showNav() {
-  const nav = document.getElementById("nav");
-  if (nav) nav.classList.remove("hidden");
-}
-
-function hideNav() {
-  const nav = document.getElementById("nav");
-  if (nav) nav.classList.add("hidden");
-}
-
-function isValidHandle(h) {
-  return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
-}
-
-function handleActionError(action, err) {
-  console.error(`${action} failed:`, err);
-  let userMessage = formatError(err);
-
-  if (err?.message?.includes("Password should be at least")) {
-    userMessage = "Password must be at least 6 characters long.";
-  } else if (err?.message?.includes("Email signups are disabled")) {
-    userMessage = "Email signups are currently disabled. Please contact support.";
-  } else if (err?.message?.includes("User already registered")) {
-    userMessage = "This email is already registered. Try logging in instead.";
-  } else if (err?.message?.includes("Invalid login credentials")) {
-    userMessage =
-      "Invalid credentials.\n\n" +
-      "• Check your email or handle\n" +
-      "• Make sure your password is correct\n" +
-      "• Be sure you created an account first\n\n" +
-      "Tip: Try logging in with your EMAIL instead of your handle.";
-  } else if (err?.message?.includes("Handle is already taken")) {
-    userMessage = "This handle is already taken. Please choose a different one.";
-  } else if (err?.message?.includes("Handle not found")) {
-    userMessage =
-      "Handle not found.\n\n" +
-      "• Check your handle spelling\n" +
-      "• Or try logging in with your EMAIL instead\n" +
-      "• Make sure you created an account first";
-  }
-
-  alert(`${action} error: ${userMessage}`);
-}
-
-async function requireUser() {
-  const { data, error } = await sb.auth.getUser();
-  if (error) throw error;
-  if (!data?.user) throw new Error("No logged-in user");
-  return data.user;
-}
-
-async function ensureHandleAvailable(handle, { allowOwnerId = null } = {}) {
+async function handleAvailable(handle) {
   const { data, error } = await sb
     .from("profiles_public")
     .select("id")
-    .eq("handle", handle)
+    .eq("handle", (handle || "").toLowerCase())
     .maybeSingle();
-
-  if (error && error.code !== "PGRST116") throw error;
-  if (data && data.id !== allowOwnerId) {
-    throw new Error("Handle is already taken");
-  }
+  if (error && error.code !== "PGRST116") console.error(error);
+  return !data;
 }
 
-async function createInitialRecords({ userId, handle, name, email, phone, isPrivate }) {
-  const upsertOrThrow = async (promise, label) => {
-    const { error } = await promise;
-    if (error) throw new Error(`${label}: ${error.message}`);
+async function ensureSession(email, password) {
+  const cur = await sb.auth.getSession();
+  if (cur.data?.session) return cur.data.session;
+  if (email && password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (!error) return data.session;
+  }
+  return null;
+}
+
+// Button busy-state wrapper
+function withBusy(btn, fn) {
+  return async (...args) => {
+    if (!btn) return fn(...args);
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = btn.dataset.busyLabel || "Working…";
+    try { return await fn(...args); }
+    finally { btn.disabled = false; btn.textContent = orig; }
   };
-
-  await upsertOrThrow(
-    sb.from("profiles_public").upsert(
-      {
-        id: userId,
-        handle,
-        display_name: name,
-        is_private: isPrivate,
-        is_searchable: !isPrivate,
-      },
-      { onConflict: "id" }
-    ),
-    "public profile"
-  );
-
-  await upsertOrThrow(
-    sb.from("profiles_private").upsert(
-      {
-        id: userId,
-        email,
-        phone: phone || null,
-        preferred_contact: phone ? "sms" : "email",
-      },
-      { onConflict: "id" }
-    ),
-    "private profile"
-  );
-
-  await upsertOrThrow(
-    sb.from("debate_pages").upsert(
-      {
-        id: userId,
-        handle,
-        title: `${name || handle}'s Debates`,
-        description: "Debate topics and positions.",
-      },
-      { onConflict: "id" }
-    ),
-    "debate page"
-  );
 }
 
-async function resolveEmailForLogin(identifier) {
-  if (!identifier) throw new Error("Missing username or email");
+/* ---------- Router ---------- */
+async function router() {
+  const { data: { session } } = await sb.auth.getSession();
+  els.nav?.classList.toggle("hidden", !session);
 
-  if (identifier.includes("@")) {
-    return identifier;
+  const hash = location.hash || "#/login";
+
+  // Auth callback route (used when email confirmations are enabled)
+  if (hash.startsWith("#/auth-callback")) {
+    const { data: { session: s } } = await sb.auth.getSession();
+    location.hash = s ? "#/profile" : "#/login";
+    return;
   }
 
-  const handle = identifier.toLowerCase();
-  const { data: pubRow, error: pubErr } = await sb
-    .from("profiles_public")
-    .select("id")
-    .eq("handle", handle)
-    .maybeSingle();
+  // If logged in, keep user out of login/signup
+  if (session && (hash === "#/login" || hash.startsWith("#/signup"))) {
+    location.hash = "#/profile";
+    return;
+  }
 
+  if (hash.startsWith("#/signup")) { showOnly(els.signup); return; }
+
+  if (hash.startsWith("#/u/")) {
+    const h = hash.split("#/u/")[1]?.toLowerCase();
+    await showPublicProfile(h);
+    return;
+  }
+
+  if (hash.startsWith("#/d/")) {
+    const h = hash.split("#/d/")[1]?.toLowerCase();
+    if (h === "me") {
+      if (!session) return (location.hash = "#/login");
+      const me = (await sb.auth.getUser()).data.user;
+      const { data: row } = await sb.from("profiles_public").select("handle").eq("id", me.id).maybeSingle();
+      await showDebatePage(row?.handle);
+      return;
+    }
+    await showDebatePage(h);
+    return;
+  }
+
+  if (hash === "#/profile") {
+    if (!session) { location.hash = "#/login"; return; }
+    await loadMyProfile();
+    showOnly(els.priv);
+    return;
+  }
+
+  // default
+  showOnly(els.login);
+}
+
+/* ---------- Auth ---------- */
+async function loginCore() {
+  const uname = (els.loginUsername.value || "").trim();
+  const password = els.loginPassword.value;
+  if (!uname || !password) return alert("Enter username and password");
+
+  let email = null;
+
+  if (uname.includes("@")) {
+    email = uname;
+  } else {
+    // Treat username as handle → resolve to email
+    const { data: pubRow, error: pubErr } = await sb
+      .from("profiles_public").select("id").eq("handle", uname.toLowerCase()).maybeSingle();
+    if (pubErr) { console.error(pubErr); return alert("Could not look up handle"); }
+    if (!pubRow?.id) return alert("Handle not found");
+
+    const { data: privRow, error: privErr } = await sb
+      .from("profiles_private").select("email").eq("id", pubRow.id).maybeSingle();
+    if (privErr) { console.error(privErr); return alert("Could not resolve email"); }
+    if (!privRow?.email) return alert("No email on file for this user");
+    email = privRow.email;
+  }
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+
+  location.hash = "#/profile";
+}
+
+async function signupCore() {
+  const name = els.signupName.value.trim();
+  const handle = els.signupHandle.value.trim().toLowerCase();
+  const email = els.signupEmail.value.trim();
+  const password = els.signupPassword.value;
+  const phone = els.signupPhone.value.trim();
+  const address = els.signupAddress.value?.trim();
+  const isPrivate = !!els.signupPrivate.checked;
+
+  if (!name) return alert("Enter your name");
+  if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
+  if (!(await handleAvailable(handle))) return alert("Handle is taken");
+  if (!email || !password) return alert("Email & password required");
+
+  // Sign up (works whether email confirmations are ON or OFF)
+  const { data: sign, error: signErr } = await sb.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: EMAIL_REDIRECT_URL }, // safe even if confirmations are disabled
+  });
+  if (signErr) throw signErr;
+
+  // If confirmations are ON, session may be null until email link clicked
+  let session = sign.session || (await ensureSession(email, password));
+  if (!session) {
+    alert("Account created. Check your email to confirm, then sign in.");
+    location.hash = "#/login";
+    return;
+  }
+
+  const userId = session.user.id;
+
+  // Public profile
+  const { error: pubErr } = await sb.from("profiles_public").upsert({
+    id: userId,
+    handle,
+    display_name: name,
+    is_private: isPrivate,
+    is_searchable: !isPrivate
+  }, { onConflict: "id" });
   if (pubErr) throw pubErr;
-  if (!pubRow?.id) throw new Error("Handle not found");
 
-  const { data: privRow, error: privErr } = await sb
-    .from("profiles_private")
-    .select("email")
-    .eq("id", pubRow.id)
+  // Private profile
+  const { error: privErr } = await sb.from("profiles_private").upsert({
+    id: userId,
+    email,
+    phone: phone || null,
+    address: address || null,
+    preferred_contact: phone ? "sms" : "email",
+  }, { onConflict: "id" });
+  if (privErr) throw privErr;
+
+  // Debate page
+  const { error: debErr } = await sb.from("debate_pages").upsert({
+    id: userId,
+    handle,
+    title: `${name || handle}'s Debates`,
+    description: "Debate topics and positions."
+  }, { onConflict: "id" });
+  if (debErr) throw debErr;
+
+  alert("Account ready!");
+  location.hash = isPrivate ? "#/profile" : `#/u/${handle}`;
+}
+
+const login = withBusy(document.getElementById("btn-login"), loginCore);
+const signup = withBusy(document.getElementById("btn-signup"), signupCore);
+
+async function logout(e) {
+  e?.preventDefault?.();
+  await sb.auth.signOut();
+  location.hash = "#/login";
+}
+
+/* ---------- Private profile ---------- */
+async function loadMyProfile() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+
+  const { data: pubRow } = await sb
+    .from("profiles_public")
+    .select("handle, display_name, bio, city, avatar_url, is_private")
+    .eq("id", user.id)
     .maybeSingle();
 
-  if (privErr) throw privErr;
-  if (!privRow?.email) throw new Error("No email on file for this user");
+  els.ppHandle.value = pubRow?.handle || "";
+  els.ppDisplay.value = pubRow?.display_name || "";
+  els.ppBio.value = pubRow?.bio || "";
+  els.ppCity.value = pubRow?.city || "";
+  els.ppAvatar.value = pubRow?.avatar_url || "";
 
-  return privRow.email;
-}
+  const { data: privRow } = await sb
+    .from("profiles_private")
+    .select("email, phone")
+    .eq("id", user.id)
+    .maybeSingle();
 
-// ---- Navigation helper actions ----
-function showSignup() {
-  hideNav();
-  showSection("signup-section");
-}
+  els.prEmail.value = privRow?.email || "";
+  els.prPhone.value = privRow?.phone || "";
 
-function showLogin() {
-  hideNav();
-  showSection("login-section");
-}
-
-function showForgotPassword() {
-  hideNav();
-  showSection("forgot-password-section");
-}
-
-// ---- AUTH: Login ----
-async function ccLogin() {
-  try {
-    const identifier = readValue("login-username");
-    const password = byId("login-password").value;
-
-    if (!identifier || !password) {
-      return alert("Enter username/email and password");
-    }
-
-    const email = await resolveEmailForLogin(identifier);
-    const { data, error } = await sb.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-
-    console.log("Sign in successful", data);
-    alert("Login OK!");
-    showNav();
-    showSection("private-profile");
-  } catch (err) {
-    handleActionError("login", err);
+  if (document.getElementById("public-link")) {
+    document.getElementById("public-link").href = `#/u/${(els.ppHandle.value || "").toLowerCase()}`;
   }
 }
 
-// ---- AUTH: Signup ----
-async function ccSignup() {
+async function saveProfile() {
   try {
-    const name = readValue("signup-name");
-    const handle = readValue("signup-handle", { lowercase: true });
-    const email = readValue("signup-email");
-    const phone = readValue("signup-phone");
-    const password = byId("signup-password").value;
-    const address = readValue("signup-address"); // not used yet, but can be added to private table later
-    const isPrivate = byId("signup-private").checked;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return alert("Not signed in");
 
-    if (!name) return alert("Enter your name");
-    if (!isValidHandle(handle))
-      return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
-    if (!email || !password) return alert("Email & password required");
-    if (password.length < 6)
-      return alert("Password must be at least 6 characters long");
+    const handle = (els.ppHandle.value || "").toLowerCase();
 
-    await ensureHandleAvailable(handle);
-
-    const { data: signData, error: signError } = await sb.auth.signUp({
-      email,
-      password,
-    });
-    if (signError) throw signError;
-
-    const user = signData.user;
-    if (!user) {
-      throw new Error(
-        "Signup succeeded but no user returned. Check Supabase Auth settings."
-      );
-    }
-
-    await createInitialRecords({
-      userId: user.id,
+    const { error: pubErr } = await sb.from("profiles_public").upsert({
+      id: user.id,
       handle,
-      name,
-      email,
-      phone,
-      isPrivate,
-    });
-
-    alert("Account and pages created successfully!");
-    showNav();
-    showSection("private-profile");
-  } catch (err) {
-    handleActionError("signup", err);
-  }
-}
-
-// ---- AUTH: Logout ----
-async function ccLogout() {
-  try {
-    const { error } = await sb.auth.signOut();
-    if (error) throw error;
-    alert("Logged out successfully");
-    hideNav();
-    showLogin();
-  } catch (err) {
-    handleActionError("logout", err);
-  }
-}
-
-// ---- AUTH: Forgot/reset password ----
-async function ccResetPassword() {
-  try {
-    const email = readValue("forgot-email");
-    if (!email) return alert("Enter your email address");
-    if (!email.includes("@")) return alert("Enter a valid email address");
-
-    const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password.html`,
-    });
-    if (error) throw error;
-
-    alert("Password reset email sent! Check your inbox (and spam folder).");
-    writeValue("forgot-email", "");
-    showLogin();
-  } catch (err) {
-    handleActionError("password reset", err);
-  }
-}
-
-// ---- SETTINGS: Load profile & preferences ----
-async function loadSettings() {
-  try {
-    const user = await requireUser();
-
-    // Load public profile
-    const { data: pubRow } = await sb
-      .from("profiles_public")
-      .select("handle, display_name, bio, city, avatar_url, is_private")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (pubRow) {
-      writeValue("settings-name", pubRow.display_name || "");
-      writeValue("settings-handle", pubRow.handle || "");
-      writeValue("settings-bio", pubRow.bio || "");
-      writeValue("settings-city", pubRow.city || "");
-      writeValue("settings-avatar-url", pubRow.avatar_url || "");
-
-      const privacySelect = document.getElementById("settings-privacy");
-      if (privacySelect) {
-        privacySelect.value = pubRow.is_private ? "private" : "public";
-      }
-    }
-
-    // Load private profile
-    const { data: privRow } = await sb
-      .from("profiles_private")
-      .select("email, phone, preferred_contact")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (privRow) {
-      writeValue("settings-email", privRow.email || "");
-      writeValue("settings-phone", privRow.phone || "");
-
-      const contactSelect = document.getElementById("settings-contact");
-      if (contactSelect) {
-        contactSelect.value = privRow.preferred_contact || "email";
-      }
-    }
-
-    // Load local appearance settings
-    const fontSize = localStorage.getItem("cc-font-size") || "medium";
-    const theme = localStorage.getItem("cc-theme") || "system";
-    const bgUrl = localStorage.getItem("cc-bg-url") || "";
-
-    writeValue("settings-font-size", fontSize);
-    writeValue("settings-theme", theme);
-    writeValue("settings-bg-url", bgUrl);
-
-    applyAppearance(fontSize, theme, bgUrl);
-
-    showSection("settings-page");
-  } catch (err) {
-    handleActionError("settings load", err);
-  }
-}
-
-// ---- SETTINGS: Save profile (top of settings) ----
-async function ccSaveProfileFromSettings() {
-  try {
-    const user = await requireUser();
-
-    const displayName = readValue("settings-name");
-    const handle = readValue("settings-handle", { lowercase: true });
-    const bio = readValue("settings-bio");
-    const city = readValue("settings-city");
-    const avatarUrl = readValue("settings-avatar-url");
-    const email = readValue("settings-email");
-    const phone = readValue("settings-phone");
-
-    if (!isValidHandle(handle)) {
-      return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
-    }
-
-    await ensureHandleAvailable(handle, { allowOwnerId: user.id });
-
-    const { error: pubErr } = await sb.from("profiles_public").upsert(
-      {
-        id: user.id,
-        handle,
-        display_name: displayName || null,
-        bio: bio || null,
-        city: city || null,
-        avatar_url: avatarUrl || null,
-      },
-      { onConflict: "id" }
-    );
+      display_name: els.ppDisplay.value || null,
+      bio: els.ppBio.value || null,
+      city: els.ppCity.value || null,
+      avatar_url: els.ppAvatar.value || null,
+    }, { onConflict: "id" });
     if (pubErr) throw pubErr;
 
-    const { error: privErr } = await sb.from("profiles_private").upsert(
-      {
-        id: user.id,
-        email: email || null,
-        phone: phone || null,
-      },
-      { onConflict: "id" }
-    );
+    const { error: privErr } = await sb.from("profiles_private").upsert({
+      id: user.id,
+      email: els.prEmail.value || null,
+      phone: els.prPhone.value || null,
+    }, { onConflict: "id" });
     if (privErr) throw privErr;
 
     alert("Profile saved");
-  } catch (err) {
-    handleActionError("profile save", err);
-  }
-}
-
-// ---- SETTINGS: Save privacy & contact ----
-async function ccSavePreferences() {
-  try {
-    const user = await requireUser();
-    const privacy = readValue("settings-privacy");
-    const contact = readValue("settings-contact");
-
-    const isPrivate = privacy === "private";
-
-    const { error: pubErr } = await sb.from("profiles_public").upsert(
-      {
-        id: user.id,
-        is_private: isPrivate,
-        is_searchable: !isPrivate,
-      },
-      { onConflict: "id" }
-    );
-    if (pubErr) throw pubErr;
-
-    const { error: privErr } = await sb.from("profiles_private").upsert(
-      {
-        id: user.id,
-        preferred_contact: contact,
-      },
-      { onConflict: "id" }
-    );
-    if (privErr) throw privErr;
-
-    alert("Preferences saved");
-  } catch (err) {
-    handleActionError("preferences save", err);
-  }
-}
-
-// ---- Appearance helpers ----
-function applyAppearance(fontSize, theme, bgUrl) {
-  const root = document.documentElement;
-  const body = document.body;
-
-  // font size
-  root.dataset.fontSize = fontSize || "medium";
-
-  // theme
-  root.dataset.theme = theme || "system";
-
-  if (theme === "dark") {
-    root.classList.add("theme-dark");
-    root.classList.remove("theme-light");
-  } else if (theme === "light") {
-    root.classList.add("theme-light");
-    root.classList.remove("theme-dark");
-  } else {
-    root.classList.remove("theme-light");
-    root.classList.remove("theme-dark");
-  }
-
-  // background image
-  if (bgUrl) {
-    body.style.backgroundImage = `url(${bgUrl})`;
-    body.style.backgroundSize = "cover";
-    body.style.backgroundAttachment = "fixed";
-  } else {
-    body.style.backgroundImage = "";
-  }
-}
-
-function ccSaveAppearance() {
-  const fontSize = readValue("settings-font-size");
-  const theme = readValue("settings-theme");
-  const bgUrl = readValue("settings-bg-url");
-
-  localStorage.setItem("cc-font-size", fontSize);
-  localStorage.setItem("cc-theme", theme);
-  localStorage.setItem("cc-bg-url", bgUrl);
-
-  applyAppearance(fontSize, theme, bgUrl);
-  alert("Appearance saved");
-}
-
-// ---- SETTINGS: Change password ----
-async function ccSavePassword() {
-  try {
-    await requireUser(); // just ensure logged in
-    const newPass = readValue("settings-new-password");
-    const confirmPass = readValue("settings-new-password-confirm");
-
-    if (!newPass || !confirmPass) {
-      return alert("Enter and confirm your new password");
+    if (document.getElementById("public-link")) {
+      document.getElementById("public-link").href = `#/u/${handle}`;
     }
-    if (newPass.length < 6) {
-      return alert("Password must be at least 6 characters");
-    }
-    if (newPass !== confirmPass) {
-      return alert("Passwords do not match");
-    }
-
-    const { error } = await sb.auth.updateUser({ password: newPass });
-    if (error) throw error;
-
-    writeValue("settings-new-password", "");
-    writeValue("settings-new-password-confirm", "");
-    alert("Password updated");
-  } catch (err) {
-    handleActionError("password change", err);
+  } catch (e) {
+    console.log("Save profile error:", e);
+    alert("Save failed: " + (e?.message || e));
   }
 }
 
-// ---- Public profile view (for your own public page) ----
-async function showPublicProfileView() {
-  try {
-    const user = await requireUser();
-    const { data: pubRow, error } = await sb
-      .from("profiles_public")
-      .select("handle, display_name, bio, city, avatar_url")
-      .eq("id", user.id)
-      .maybeSingle();
+/* ---------- Public profile ---------- */
+async function showPublicProfile(handle) {
+  showOnly(els.pub);
 
-    if (error) throw error;
-    if (!pubRow) {
-      alert("No public profile yet. Fill out your profile in Settings.");
-      return loadSettings();
-    }
-
-    const avatar = document.getElementById("pub-avatar");
-    const displayName = document.getElementById("pub-display-name");
-    const handle = document.getElementById("pub-handle");
-    const city = document.getElementById("pub-city");
-    const bio = document.getElementById("pub-bio");
-
-    if (avatar) avatar.src = pubRow.avatar_url || "https://via.placeholder.com/80";
-    if (displayName) displayName.textContent = pubRow.display_name || "Anonymous";
-    if (handle) handle.textContent = `@${pubRow.handle}`;
-    if (city) city.textContent = pubRow.city || "";
-    if (bio) bio.textContent = pubRow.bio || "No bio yet.";
-
-    showSection("public-profile");
-  } catch (err) {
-    handleActionError("public profile view", err);
+  if (!handle) {
+    els.pubDisplay.textContent = "Profile not found";
+    els.pubHandle.textContent = "";
+    els.pubBio.textContent = "";
+    els.pubCity.textContent = "";
+    els.pubAvatar?.removeAttribute("src");
+    return;
   }
+
+  const { data: row, error } = await sb
+    .from("profiles_public")
+    .select("display_name, handle, bio, city, avatar_url, is_private, is_searchable")
+    .eq("handle", handle)
+    .maybeSingle();
+
+  if (!row || error) {
+    els.pubDisplay.textContent = "Profile not found";
+    els.pubHandle.textContent = "";
+    els.pubBio.textContent = "";
+    els.pubCity.textContent = "";
+    els.pubAvatar?.removeAttribute("src");
+    return;
+  }
+
+  els.pubDisplay.textContent = row.display_name || row.handle;
+  els.pubHandle.textContent = `@${row.handle}`;
+  els.pubBio.textContent = row.bio || "";
+  els.pubCity.textContent = row.city || "";
+  if (row.avatar_url) els.pubAvatar.src = row.avatar_url;
+  else els.pubAvatar?.removeAttribute("src");
 }
 
-// ---- Debates view ----
-async function showDebates() {
-  try {
-    const user = await requireUser();
-    const { data: row } = await sb
-      .from("debate_pages")
-      .select("title, description")
-      .eq("id", user.id)
-      .maybeSingle();
+/* ---------- Debate page ---------- */
+async function showDebatePage(handle) {
+  showOnly(els.debate);
 
-    const titleEl = document.getElementById("deb-title");
-    const descEl = document.getElementById("deb-desc");
-
-    if (row) {
-      if (titleEl) titleEl.textContent = row.title || "My Debates";
-      if (descEl) descEl.textContent = row.description || "";
-    } else {
-      if (titleEl) titleEl.textContent = "My Debates";
-      if (descEl) descEl.textContent = "";
-    }
-
-    showSection("debate-page");
-  } catch (err) {
-    handleActionError("debates load", err);
+  if (!handle) {
+    els.debTitle.textContent = "Debates";
+    els.debDesc.textContent = "No handle given.";
+    els.debContent.innerHTML = "";
+    return;
   }
+
+  const { data: deb, error } = await sb
+    .from("debate_pages")
+    .select("title, description, is_public, handle")
+    .eq("handle", handle)
+    .maybeSingle();
+
+  if (!deb || error) {
+    els.debTitle.textContent = "Debate page not found";
+    els.debDesc.textContent = "";
+    els.debContent.innerHTML = "";
+    return;
+  }
+
+  els.debTitle.textContent = deb.title || `@${deb.handle} · Debates`;
+  els.debDesc.textContent = deb.description || (deb.is_public ? "Public debates" : "Private (hidden) debates");
+  els.debContent.innerHTML = '<p class="hint">Threads coming soon.</p>';
 }
 
-// ---- Attach all event listeners ----
-function attachEventListeners() {
-  console.log("Attaching event listeners…");
+/* ---------- Robust click delegation + boot ---------- */
+window.addEventListener("error", (e) => console.error("JS error:", e.message, e.error));
 
-  // login
-  byId("btn-login").addEventListener("click", ccLogin);
-  byId("go-signup").addEventListener("click", showSignup);
-  byId("forgot-password-btn").addEventListener("click", showForgotPassword);
+function delegateClicks() {
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
 
-  const loginUsername = byId("login-username");
-  const loginPassword = byId("login-password");
-  loginUsername.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
+    if (t.id === "btn-login") {
       e.preventDefault();
-      ccLogin();
+      login();
+    }
+    if (t.id === "btn-signup") {
+      e.preventDefault();
+      signup();
+    }
+    if (t.id === "go-signup") {
+      e.preventDefault();
+      location.hash = "#/signup";
+    }
+    if (t.id === "go-login") {
+      e.preventDefault();
+      location.hash = "#/login";
+    }
+    if (t.id === "save-profile") {
+      e.preventDefault();
+      saveProfile();
+    }
+    if (t.id === "logout-link") {
+      e.preventDefault();
+      logout(e);
     }
   });
-  loginPassword.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      ccLogin();
-    }
+}
+
+function wire() {
+  // set busy labels
+  const btnLogin = document.getElementById("btn-login");
+  const btnSignup = document.getElementById("btn-signup");
+  if (btnLogin) btnLogin.dataset.busyLabel = "Signing in…";
+  if (btnSignup) btnSignup.dataset.busyLabel = "Creating…";
+
+  // enter to submit
+  els.loginPassword?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("btn-login")?.click();
+  });
+  els.signupPassword?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("btn-signup")?.click();
   });
 
-  // forgot password
-  byId("btn-reset-password").addEventListener("click", ccResetPassword);
-  byId("back-to-login").addEventListener("click", showLogin);
-
-  // signup
-  byId("btn-signup").addEventListener("click", ccSignup);
-  byId("go-login").addEventListener("click", showLogin);
-
-  // settings actions
-  byId("settings-save-profile").addEventListener("click", ccSaveProfileFromSettings);
-  byId("settings-save-preferences").addEventListener("click", ccSavePreferences);
-  byId("settings-save-appearance").addEventListener("click", ccSaveAppearance);
-  byId("settings-save-password").addEventListener("click", ccSavePassword);
-  byId("settings-logout").addEventListener("click", ccLogout);
-
-  // nav
-  const navPrivate = document.getElementById("nav-private-profile");
-  if (navPrivate) {
-    navPrivate.addEventListener("click", (e) => {
-      e.preventDefault();
-      showSection("private-profile");
-    });
-  }
-
-  const navPublic = document.getElementById("nav-public-profile");
-  if (navPublic) {
-    navPublic.addEventListener("click", (e) => {
-      e.preventDefault();
-      showPublicProfileView();
-    });
-  }
-
-  const navDebates = document.getElementById("nav-debates");
-  if (navDebates) {
-    navDebates.addEventListener("click", (e) => {
-      e.preventDefault();
-      showDebates();
-    });
-  }
-
-  const navSettings = document.getElementById("nav-settings");
-  if (navSettings) {
-    navSettings.addEventListener("click", (e) => {
-      e.preventDefault();
-      loadSettings();
-    });
-  }
-
-  const logoutBtn = document.getElementById("logout-btn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", ccLogout);
-  }
-
-  console.log("Listeners attached.");
+  delegateClicks();
+  window.addEventListener("hashchange", router);
+  sb.auth.onAuthStateChange(() => router());
+  router();
 }
 
-// ---- Init app ----
-async function initApp() {
-  console.log("=== Civic Chatter Initializing ===");
-  console.log("Supabase client:", sb ? "✓ Connected" : "✗ Not connected");
-
-  attachEventListeners();
-
-  // If already logged in, show nav + private space
-  try {
-    const { data } = await sb.auth.getSession();
-    if (data?.session) {
-      showNav();
-      showSection("private-profile");
-    } else {
-      hideNav();
-      showLogin();
-    }
-  } catch {
-    hideNav();
-    showLogin();
-  }
-
-  console.log("App ready.");
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initApp);
-} else {
-  initApp();
-}
+document.readyState === "loading"
+  ? document.addEventListener("DOMContentLoaded", wire)
+  : wire();

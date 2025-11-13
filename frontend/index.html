@@ -4,60 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Civic Chatter</title>
-  <meta name="description" content="Civic Chatter helps neighbors coordinate, debate, and share civic updates powered by Supabase." />
-  <meta name="color-scheme" content="light dark" />
-  <meta property="og:title" content="Civic Chatter" />
-  <meta property="og:description" content="Coordinate debates, manage civic profiles, and stay engaged with your community." />
-
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-  <link rel="dns-prefetch" href="https://uoehxenaabrmuqzhxjdi.supabase.co" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="preconnect" href="https://uoehxenaabrmuqzhxjdi.supabase.co" crossorigin />
-
-  <link rel="preload" href="styles.css" as="style" />
+  <meta name="description" content="Civic Chatter — coordinate debates, manage civic profiles" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-  <!-- Supabase SDK - NO DEFER so it loads and executes immediately -->
+  
+  <!-- Supabase SDK - NO DEFER -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- PWA (optional) -->
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#002868" />
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
-
-  <noscript>
-    <style>main { display: none; }</style>
-    <div class="card center" role="alert">
-      JavaScript is required to use Civic Chatter. Please enable it in your browser settings.
-    </div>
-  </noscript>
-
   <header>
     <h1>Civic Chatter</h1>
-    <nav id="nav" class="hidden" aria-label="Primary navigation">
-      <a href="#" class="nav-link" id="nav-private-profile">Private Profile</a>
-      <a href="#" class="nav-link" id="nav-public-profile">Public Profile</a>
-      <a href="#" class="nav-link" id="nav-debates">Debates</a>
-      <a href="#" class="nav-link" id="nav-settings">Settings</a>
-      <button type="button" class="logout-btn" id="logout-btn" aria-label="Log out of Civic Chatter">
-        Logout
-      </button>
+    <nav id="nav" class="hidden">
+      <a href="#/profile">My Profile</a>
+      <a href="#/d/me">My Debates</a>
+      <a href="#" id="logout-link">Logout</a>
     </nav>
   </header>
 
-  <main id="main" class="container">
+  <main class="container">
 
-    <!-- LOGIN -->
+    <!-- LOGIN SECTION -->
     <section id="login-section" class="card">
-      <h2 class="mt-0">Sign in</h2>
+      <h2>Sign in</h2>
       <p class="hint">Use your <b>handle</b> or <b>email</b> and password.</p>
 
       <label>Username or Email
         <input id="login-username" type="text" autocomplete="username" placeholder="yourhandle or you@example.com" />
-        <small class="hint">💡 If handle doesn't work, try your email address.</small>
       </label>
 
       <label>Password
@@ -68,17 +40,12 @@
         <button id="btn-login" type="button" class="button--primary">Sign In</button>
         <button id="go-signup" type="button" class="button--ghost">Create account</button>
       </div>
-
-      <div style="text-align: center; margin-top: 1rem;">
-        <button id="forgot-password-btn" type="button" class="link-button">
-          Forgot password?
-        </button>
-      </div>
     </section>
 
-    <!-- SIGNUP -->
+    <!-- SIGNUP SECTION -->
     <section id="signup-section" class="card hidden">
-      <h2 class="mt-0">Create account</h2>
+      <h2>Create account</h2>
+
       <div class="grid">
         <label>Name
           <input id="signup-name" type="text" placeholder="Your name" />
@@ -118,185 +85,82 @@
       </div>
     </section>
 
-    <!-- FORGOT PASSWORD -->
-    <section id="forgot-password-section" class="card hidden">
-      <h2 class="mt-0">Reset Password</h2>
-      <p class="hint">
-        Enter your email address and we'll send you a password reset link.
-      </p>
-
-      <label>Email Address
-        <input id="forgot-email" type="email" autocomplete="email" placeholder="you@example.com" />
-      </label>
-
-      <div class="row">
-        <button id="btn-reset-password" type="button" class="button--primary">Send Reset Link</button>
-        <button id="back-to-login" type="button" class="button--ghost">Back to login</button>
-      </div>
-    </section>
-
-    <!-- PRIVATE PROFILE -->
+    <!-- PRIVATE PROFILE (Edit Mode) -->
     <section id="private-profile" class="card hidden">
-      <h2 class="mt-0">My Private Profile</h2>
-      <p class="hint">
-        This is your private workspace. Only you can see this page.  
-        Profile details are managed from <b>Settings</b>.
-      </p>
+      <h2>My Profile</h2>
+      <p class="hint">Edit your profile information below.</p>
 
-      <div class="summary-box">
-        <h3>Welcome!</h3>
-        <p>Use the navigation above to:</p>
-        <ul>
-          <li><b>View Public Profile</b> - See how others see your profile</li>
-          <li><b>Manage Debates</b> - Create and participate in debates</li>
-          <li><b>Update Settings</b> - Edit your profile and preferences</li>
-        </ul>
+      <div class="grid">
+        <label>Handle (public @username)
+          <input id="pp-handle" type="text" placeholder="yourhandle" />
+        </label>
+
+        <label>Display Name
+          <input id="pp-display-name" type="text" placeholder="Your Name" />
+        </label>
+
+        <label>Bio
+          <textarea id="pp-bio" rows="3" placeholder="Tell others about yourself"></textarea>
+        </label>
+
+        <label>City
+          <input id="pp-city" type="text" placeholder="e.g. Manila" />
+        </label>
+
+        <label>Avatar URL
+          <input id="pp-avatar-url" type="url" placeholder="https://..." />
+        </label>
+
+        <label>Email
+          <input id="pr-email" type="email" placeholder="you@example.com" />
+        </label>
+
+        <label>Phone
+          <input id="pr-phone" type="tel" placeholder="+63..." />
+        </label>
       </div>
 
-      <h3 class="mt-2">Your Notes / Plans (coming soon)</h3>
-      <p class="hint">Later, this will be where you draft posts, upload videos, or keep private notes.</p>
+      <button id="save-profile" type="button" class="button--primary">Save Profile</button>
+
+      <div class="mt-2">
+        <a id="public-link" href="#/u/" class="button--ghost" style="display: inline-block; margin-top: 1rem;">View My Public Profile</a>
+      </div>
     </section>
 
-    <!-- PUBLIC PROFILE -->
+    <!-- PUBLIC PROFILE (View) -->
     <section id="public-profile" class="card hidden">
-      <h2 class="mt-0">My Public Profile Preview</h2>
-      <p class="hint">
-        This is how your public profile will look to others.
-        Change the details in <b>Settings</b>.
-      </p>
+      <h2>Public Profile</h2>
 
       <div class="public-header">
-        <img id="pub-avatar" alt="avatar" class="avatar" src="https://via.placeholder.com/80" loading="lazy" decoding="async" />
+        <img id="pub-avatar" alt="avatar" class="avatar" src="https://via.placeholder.com/80" loading="lazy" />
         <div>
           <h3 id="pub-display-name" class="mt-0 mb-0">Loading...</h3>
           <p class="handle" id="pub-handle">@loading</p>
           <p class="city" id="pub-city"></p>
         </div>
       </div>
-      <p id="pub-bio">Loading your bio...</p>
 
-      <h3 class="mt-2">Public Content (coming soon)</h3>
-      <p class="hint">Later, this will show your public posts, debates, and videos.</p>
+      <p id="pub-bio">Loading bio...</p>
+
+      <div class="mt-2">
+        <a href="#/profile" class="button--ghost">Back to My Profile</a>
+      </div>
     </section>
 
     <!-- DEBATES PAGE -->
     <section id="debate-page" class="card hidden">
-      <h2 id="deb-title" class="mt-0">My Debates</h2>
+      <h2 id="deb-title">Debates</h2>
       <p id="deb-desc" class="hint"></p>
-      <div id="deb-content" class="mt-3" aria-live="polite">
-        <p class="hint">Debate threads will appear here in a later version.</p>
-      </div>
-    </section>
+      <div id="deb-content" class="mt-2"></div>
 
-    <!-- SETTINGS PAGE -->
-    <section id="settings-page" class="card hidden">
-      <h2 class="mt-0">Settings</h2>
-
-      <!-- Profile Section -->
-      <h3>Profile Information</h3>
-      <div class="grid">
-        <label>Display Name
-          <input id="settings-name" type="text" placeholder="e.g. Conrad G." />
-        </label>
-
-        <label>Handle (public @username)
-          <input id="settings-handle" type="text" placeholder="e.g. conrad" />
-          <small class="hint">3+ chars: a–z, 0–9, _ or -</small>
-        </label>
-
-        <label>Bio
-          <textarea id="settings-bio" rows="3" placeholder="Tell others about yourself"></textarea>
-        </label>
-
-        <label>City
-          <input id="settings-city" type="text" placeholder="e.g. Manila" />
-        </label>
-
-        <label>Avatar URL
-          <input id="settings-avatar-url" type="url" placeholder="https://..." />
-        </label>
-
-        <label>Email
-          <input id="settings-email" type="email" placeholder="user@example.com" />
-        </label>
-
-        <label>Phone
-          <input id="settings-phone" type="tel" placeholder="+63..." />
-        </label>
-      </div>
-
-      <button id="settings-save-profile" type="button" class="button--primary">Save Profile</button>
-
-      <!-- Privacy & Contact Section -->
-      <h3 class="mt-2">Privacy & Contact Preferences</h3>
-      <div class="grid">
-        <label>Profile Visibility
-          <select id="settings-privacy">
-            <option value="public">Public (searchable)</option>
-            <option value="private">Private (not searchable)</option>
-          </select>
-        </label>
-
-        <label>Preferred Contact Method
-          <select id="settings-contact">
-            <option value="email">Email</option>
-            <option value="sms">SMS</option>
-          </select>
-        </label>
-      </div>
-
-      <button id="settings-save-preferences" type="button" class="button--primary">Save Preferences</button>
-
-      <!-- Appearance Section -->
-      <h3 class="mt-2">Appearance</h3>
-      <div class="grid">
-        <label>Font Size
-          <select id="settings-font-size">
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
-          </select>
-        </label>
-
-        <label>Theme
-          <select id="settings-theme">
-            <option value="system">Use system theme</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
-
-        <label>Background Image URL (optional)
-          <input id="settings-bg-url" type="url" placeholder="https://example.com/background.jpg" />
-        </label>
-      </div>
-
-      <button id="settings-save-appearance" type="button" class="button--primary">Save Appearance</button>
-
-      <!-- Security Section -->
-      <h3 class="mt-2">Change Password</h3>
-      <div class="grid">
-        <label>New Password
-          <input id="settings-new-password" type="password" autocomplete="new-password" placeholder="Enter new password" minlength="6" />
-          <small class="hint">Minimum 6 characters</small>
-        </label>
-
-        <label>Confirm New Password
-          <input id="settings-new-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm new password" minlength="6" />
-        </label>
-      </div>
-
-      <button id="settings-save-password" type="button" class="button--primary">Update Password</button>
-
-      <!-- Logout -->
-      <div class="mt-3">
-        <button id="settings-logout" type="button" class="button--ghost">Logout</button>
+      <div class="mt-2">
+        <a href="#/profile" class="button--ghost">Back to My Profile</a>
       </div>
     </section>
 
   </main>
 
-  <!-- App logic - WITH defer to wait for DOM -->
+  <!-- App logic - WITH defer -->
   <script src="app.js" defer></script>
 </body>
 </html>
