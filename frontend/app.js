@@ -1029,9 +1029,42 @@ async function showDebatePageFromHash(handleOrMe) {
     }
 
     if (!handle) {
-      byId("deb-title").textContent = "Debates";
-      byId("deb-desc").textContent = "No debate page found.";
-      byId("deb-content").innerHTML = "";
+      // Render a listing of debate rooms
+      const { data: rows, error: rowsErr } = await sb.from('debate_pages').select('id, title, description, handle').order('title', { ascending: true });
+      if (rowsErr) throw rowsErr;
+      byId('deb-title').textContent = 'Debates';
+      byId('deb-desc').textContent = 'Join a live debate room below.';
+      const container = byId('deb-content');
+      container.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<p class="hint">No debates yet.</p>';
+        return;
+      }
+      rows.forEach((d) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.display = 'flex';
+        card.style.justifyContent = 'space-between';
+        card.style.alignItems = 'center';
+        card.style.gap = '1rem';
+        card.innerHTML = `
+          <div>
+            <div style="font-weight:600">${escapeHtml(d.title || `@${d.handle}`)}</div>
+            <div class="hint">${escapeHtml(d.description || '')}</div>
+          </div>
+          <div>
+            <button class="button--primary debate-join" data-room="${escapeHtml('civicchatter-' + (d.handle || d.title).replace(/[^a-zA-Z0-9_-]/g, ''))}">Join</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      // bind join buttons
+      container.querySelectorAll('.debate-join').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const room = e.currentTarget?.getAttribute('data-room');
+          openDebateRoom(room);
+        });
+      });
       return;
     }
 
@@ -1043,22 +1076,22 @@ async function showDebatePageFromHash(handleOrMe) {
 
       if (error || !deb) return showDebatePageNotFound();
 
-    byId("deb-title").textContent = deb.title || `@${deb.handle} · Debates`;
-    byId("deb-desc").textContent =
+    byId('deb-title').textContent = deb.title || `@${deb.handle} · Debates`;
+    byId('deb-desc').textContent =
       deb.description || "Debate topics and positions.";
-    // Render a live room card that opens a Jitsi Meet room using the debate handle
+    // Render a single-room card with Join button
     const roomName = `civicchatter-${(deb.handle || deb.title || 'room').replace(/[^a-zA-Z0-9_-]/g, '')}`;
-    byId("deb-content").innerHTML = `
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-        <div>
-          <div style="font-weight:600">${escapeHtml(deb.title || `@${deb.handle} · Debates`)}</div>
-          <div class="hint">${escapeHtml(deb.description || 'Live debate room — click Join to enter')}</div>
-        </div>
-        <div>
-          <button class="button--primary" data-room="${escapeHtml(roomName)}" id="deb-join-btn">Join Live Debate</button>
-        </div>
+    byId('deb-content').innerHTML = `
+      <div class="card">
+        <div style="font-weight:600">${escapeHtml(deb.title || `@${deb.handle} · Debates`)}</div>
+        <div class="hint">${escapeHtml(deb.description || '')}</div>
+        <div style="margin-top:1rem; text-align:right;"><button class="button--primary" id="deb-join-btn" data-room="${escapeHtml(roomName)}">Join Live Debate</button></div>
       </div>
     `;
+    byId('deb-join-btn')?.addEventListener('click', (e) => {
+      const room = e.currentTarget?.getAttribute('data-room');
+      if (room) openDebateRoom(room, deb.title || deb.handle);
+    });
 
     // Bind join button
     byId('deb-join-btn')?.addEventListener('click', (e) => {
@@ -1105,6 +1138,99 @@ async function showDebatePageFromHash(handleOrMe) {
     const body = byId('debate-modal-body');
     if (modal) modal.classList.add('hidden');
     if (body) body.innerHTML = '';
+  }
+
+  // Jitsi API integration
+  let _jitsiApi = null;
+  let _jitsiRoom = null;
+
+  async function loadJitsiAPI() {
+    if (window.JitsiMeetExternalAPI) return window.JitsiMeetExternalAPI;
+    // Dynamically load the external API script from meet.jit.si
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://meet.jit.si/external_api.js';
+      s.onload = () => resolve(window.JitsiMeetExternalAPI);
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function openDebateRoom(roomName, title) {
+    try {
+      if (!roomName) {
+        alert('No room specified');
+        return;
+      }
+      const modal = byId('debate-modal');
+      const body = byId('debate-modal-body');
+      const titleEl = byId('debate-modal-title');
+      const countEl = byId('debate-modal-count');
+      const muteBtn = byId('debate-mute-toggle');
+      if (!modal || !body) return;
+      // Ensure API is loaded
+      await loadJitsiAPI();
+      // Clear any previous instance
+      if (_jitsiApi) {
+        try { _jitsiApi.dispose(); } catch (e) { console.warn('dispose previous jitsi', e); }
+        _jitsiApi = null;
+        _jitsiRoom = null;
+      }
+      body.innerHTML = '';
+      const parent = document.createElement('div');
+      parent.style.width = '100%';
+      parent.style.height = '100%';
+      body.appendChild(parent);
+
+      const domain = 'meet.jit.si';
+      const options = {
+        roomName: roomName,
+        parentNode: parent,
+        configOverwrite: { enableWelcomePage: false },
+        interfaceConfigOverwrite: { TOOLBAR_BUTTONS: [] },
+      };
+      _jitsiApi = new window.JitsiMeetExternalAPI(domain, options);
+      _jitsiRoom = roomName;
+      if (titleEl) titleEl.textContent = title || roomName;
+      // participant count
+      const updateCount = async () => {
+        try {
+          const participants = await _jitsiApi.getNumberOfParticipants?.();
+          if (countEl) countEl.textContent = `${participants || 1} participant${(participants && participants>1)?'s':''}`;
+        } catch (e) { /* ignore */ }
+      };
+      // initial set a small timeout to allow join
+      setTimeout(updateCount, 1500);
+      // events
+      _jitsiApi.addEventListener('participantJoined', updateCount);
+      _jitsiApi.addEventListener('participantLeft', updateCount);
+      _jitsiApi.addEventListener('videoConferenceJoined', updateCount);
+      _jitsiApi.addEventListener('videoConferenceLeft', () => { closeDebateRoom(); });
+
+      // mute toggle
+      if (muteBtn) {
+        muteBtn.textContent = 'Mute';
+        muteBtn.onclick = async () => {
+          try {
+            const isMuted = await _jitsiApi.isAudioMuted?.();
+            if (isMuted) {
+              _jitsiApi.executeCommand('toggleAudio');
+              muteBtn.textContent = 'Mute';
+            } else {
+              _jitsiApi.executeCommand('toggleAudio');
+              muteBtn.textContent = 'Unmute';
+            }
+          } catch (e) { console.warn('mute toggle error', e); }
+        };
+      }
+
+      modal.classList.remove('hidden');
+      // wire close
+      byId('debate-modal-close')?.addEventListener('click', closeDebateRoom);
+    } catch (e) {
+      console.error('openDebateRoom error', e);
+      alert('Failed to open live debate room');
+    }
   }
 // ------------ Router ------------
 
