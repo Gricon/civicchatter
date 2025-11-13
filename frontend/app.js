@@ -82,11 +82,42 @@ async function withBusy(btnId, busyText, fn) {
   btn.disabled = true;
   if (busyText) btn.textContent = busyText;
 
+  // Safety: if the operation never completes (network hang, etc.),
+  // restore the button after a timeout so UI doesn't remain blocked.
+  // This does NOT cancel the operation, it only restores the button state
+  // to allow the user to retry or inspect the console.
+  let cleared = false;
+  const TIMEOUT_MS = 15000; // 15s
+  const timeoutId = setTimeout(() => {
+    if (!cleared) {
+      console.warn(`withBusy(${btnId}): operation timed out after ${TIMEOUT_MS}ms, restoring button state`);
+      try {
+        btn.disabled = originalDisabled;
+        btn.textContent = originalText;
+      } catch (e) {
+        console.error('withBusy: failed to restore button state after timeout', e);
+      }
+    }
+  }, TIMEOUT_MS);
+
   try {
-    return await fn();
-  } finally {
+    const result = await fn();
+    cleared = true;
+    clearTimeout(timeoutId);
     btn.disabled = originalDisabled;
     btn.textContent = originalText;
+    return result;
+  } catch (err) {
+    // Ensure we restore UI even on errors
+    cleared = true;
+    clearTimeout(timeoutId);
+    try {
+      btn.disabled = originalDisabled;
+      btn.textContent = originalText;
+    } catch (e) {
+      console.error('withBusy: failed to restore button state after error', e);
+    }
+    throw err;
   }
 }
 
@@ -202,29 +233,41 @@ async function resolveEmailForLogin(identifier) {
 async function handleLogin() {
   await withBusy("btn-login", "Signing in…", async () => {
     try {
+      console.debug('handleLogin: start');
       const identifier = readValue("login-username");
       const password = readValue("login-password");
+
+      console.debug('handleLogin: got identifier/password?', { identifier: !!identifier, password: !!password });
 
       if (!identifier || !password) {
         alert("Enter username/email and password");
         return;
       }
 
+      console.debug('handleLogin: resolving email for', identifier);
       const email = await resolveEmailForLogin(identifier);
-      console.log("Resolved login email:", email);
+      console.debug("handleLogin: Resolved login email:", email);
 
+      console.debug('handleLogin: calling sb.auth.signInWithPassword');
       const { data, error } = await sb.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.debug('handleLogin: signInWithPassword returned error', error);
+        throw error;
+      }
 
-      console.log("Login success:", data);
+      console.debug("handleLogin: Login success:", data);
       showNav();
+
+      console.debug('handleLogin: loading profile');
       await loadMyProfile();
+      console.debug('handleLogin: profile loaded, routing to /profile');
       window.location.hash = "#/profile";
     } catch (err) {
+      console.error('handleLogin: caught error', err);
       alertActionError("login", err);
     }
   });
@@ -596,6 +639,16 @@ function initApp() {
 
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.log("Supabase client created:", !!sb);
+
+  // Global handler to surface otherwise-silent promise rejections
+  window.addEventListener('unhandledrejection', (ev) => {
+    console.error('Unhandled promise rejection:', ev.reason);
+    // Show a non-blocking notice for debugging
+    const msg = ev.reason?.message || String(ev.reason || 'Unhandled rejection');
+    // Keep short and non-annoying — don't alert blindly in production.
+    // Uncomment the alert during active debugging if desired.
+    // alert(`Unhandled error: ${msg}`);
+  });
 
   attachEventListeners();
 
