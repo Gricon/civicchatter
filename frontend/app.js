@@ -7,25 +7,42 @@ const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
 const EMAIL_REDIRECT_URL = "https://civicchatter.netlify.app/auth-callback.html";
 
-if (!window.supabase) {
-  alert("Supabase SDK missing. Ensure the CDN loads before app.js");
-  throw new Error("Supabase SDK missing");
-}
+if (!window.supabase) { alert("Supabase SDK missing"); throw new Error("Supabase SDK missing"); }
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------- Debug console ---------- */
+const dbgBox = document.getElementById("cc-debug");
+const dbgLog = document.getElementById("cc-debug-log");
+function log(...args){ if(!dbgLog) return; const line=document.createElement("div"); line.innerHTML=args.map(a => typeof a==='string'?a:(`<pre>${escapeHtml(JSON.stringify(a,null,2))}</pre>`)).join(' '); dbgLog.appendChild(line); dbgLog.scrollTop=dbgLog.scrollHeight; }
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+window.__ccClearDebug = () => { if(dbgLog) dbgLog.innerHTML=''; };
+window.__ccSelfTest = async () => {
+  dbgBox.style.display='block';
+  log("<b>Self-test</b>");
+  try {
+    log('SDK present:', !!window.supabase);
+    const g = await sb.auth.getSession();
+    log('Session:', g.data?.session ? "<span class='ok'>yes</span>" : "<span class='err'>no</span>");
+    const ping = await fetch(`${SUPABASE_URL}/auth/v1/health`).then(r=>r.ok);
+    log('Auth health:', ping ? "<span class='ok'>ok</span>" : "<span class='err'>fail</span>");
+    const probe = await sb.from('profiles_public').select('id').limit(1);
+    log('DB probe error:', probe.error ? `<span class='err'>${probe.error.message}</span>` : "<span class='ok'>none</span>");
+  } catch(e){ log("<span class='err'>Self-test failed:</span>", e?.message || e); }
+};
+
+/* Auto-open debug panel if route is #/debug */
+if (location.hash === "#/debug" && dbgBox) dbgBox.style.display = "block";
 
 /* ---------- Elements ---------- */
 const els = {
   nav: document.getElementById("nav"),
-  // sections
   login: document.getElementById("login-section"),
   signup: document.getElementById("signup-section"),
   priv: document.getElementById("private-profile"),
   pub: document.getElementById("public-profile"),
   debate: document.getElementById("debate-page"),
-  // login inputs
   loginUsername: document.getElementById("login-username"),
   loginPassword: document.getElementById("login-password"),
-  // signup inputs
   signupName: document.getElementById("signup-name"),
   signupHandle: document.getElementById("signup-handle"),
   signupEmail: document.getElementById("signup-email"),
@@ -33,7 +50,6 @@ const els = {
   signupPhone: document.getElementById("signup-phone"),
   signupAddress: document.getElementById("signup-address"),
   signupPrivate: document.getElementById("signup-private"),
-  // private fields
   ppHandle: document.getElementById("pp-handle"),
   ppDisplay: document.getElementById("pp-display-name"),
   ppBio: document.getElementById("pp-bio"),
@@ -41,13 +57,11 @@ const els = {
   ppAvatar: document.getElementById("pp-avatar-url"),
   prEmail: document.getElementById("pr-email"),
   prPhone: document.getElementById("pr-phone"),
-  // public view
   pubAvatar: document.getElementById("pub-avatar"),
   pubDisplay: document.getElementById("pub-display-name"),
   pubHandle: document.getElementById("pub-handle"),
   pubCity: document.getElementById("pub-city"),
   pubBio: document.getElementById("pub-bio"),
-  // debate
   debTitle: document.getElementById("deb-title"),
   debDesc: document.getElementById("deb-desc"),
   debContent: document.getElementById("deb-content"),
@@ -55,133 +69,111 @@ const els = {
 
 /* ---------- Utils ---------- */
 const isValidHandle = (h) => /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
-
-function showOnly(...toShow) {
+function showOnly(...toShow){
   [els.login, els.signup, els.priv, els.pub, els.debate].forEach(s => s?.classList.add("hidden"));
   toShow.forEach(s => s?.classList.remove("hidden"));
 }
-
-async function handleAvailable(handle) {
-  const { data, error } = await sb
-    .from("profiles_public")
-    .select("id")
-    .eq("handle", (handle || "").toLowerCase())
-    .maybeSingle();
-  if (error && error.code !== "PGRST116") console.error(error);
+async function handleAvailable(handle){
+  const { data, error } = await sb.from("profiles_public").select("id").eq("handle",(handle||"").toLowerCase()).maybeSingle();
+  if (error && error.code !== "PGRST116") log("<span class='err'>handle check:</span>", error.message);
   return !data;
 }
-
-async function ensureSession(email, password) {
+async function ensureSession(email,password){
   const cur = await sb.auth.getSession();
   if (cur.data?.session) return cur.data.session;
   if (email && password) {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (!error) return data.session;
+    const r = await sb.auth.signInWithPassword({ email, password });
+    if (!r.error) return r.data.session;
   }
   return null;
 }
-
-// Button busy-state wrapper
-function withBusy(btn, fn) {
-  return async (...args) => {
-    if (!btn) return fn(...args);
-    btn.disabled = true;
-    const orig = btn.textContent;
-    btn.textContent = btn.dataset.busyLabel || "Working…";
+function withBusyById(id, fn){
+  return async (...args)=>{
+    const btn = document.getElementById(id);
+    const orig = btn?.textContent;
+    if (btn){ btn.disabled=true; btn.textContent = (btn.dataset.busyLabel||"Working…"); }
     try { return await fn(...args); }
-    finally { btn.disabled = false; btn.textContent = orig; }
+    finally { if (btn){ btn.disabled=false; btn.textContent = orig; } }
   };
 }
 
 /* ---------- Router ---------- */
-async function router() {
-  const { data: { session } } = await sb.auth.getSession();
+async function router(){
+  const { data:{ session } } = await sb.auth.getSession();
   els.nav?.classList.toggle("hidden", !session);
 
   const hash = location.hash || "#/login";
+  if (hash === "#/debug" && dbgBox) dbgBox.style.display='block';
 
-  // Auth callback route (used when email confirmations are enabled)
-  if (hash.startsWith("#/auth-callback")) {
-    const { data: { session: s } } = await sb.auth.getSession();
+  if (hash.startsWith("#/auth-callback")){
+    const { data:{ session: s } } = await sb.auth.getSession();
     location.hash = s ? "#/profile" : "#/login";
     return;
   }
 
-  // If logged in, keep user out of login/signup
-  if (session && (hash === "#/login" || hash.startsWith("#/signup"))) {
-    location.hash = "#/profile";
-    return;
+  if (session && (hash === "#/login" || hash.startsWith("#/signup"))){
+    location.hash = "#/profile"; return;
   }
 
   if (hash.startsWith("#/signup")) { showOnly(els.signup); return; }
 
-  if (hash.startsWith("#/u/")) {
-    const h = hash.split("#/u/")[1]?.toLowerCase();
-    await showPublicProfile(h);
-    return;
+  if (hash.startsWith("#/u/")){
+    const h = hash.split("#/u/")[1]?.toLowerCase(); await showPublicProfile(h); return;
   }
 
-  if (hash.startsWith("#/d/")) {
+  if (hash.startsWith("#/d/")){
     const h = hash.split("#/d/")[1]?.toLowerCase();
-    if (h === "me") {
-      if (!session) return (location.hash = "#/login");
+    if (h === "me"){
+      if (!session) return (location.hash="#/login");
       const me = (await sb.auth.getUser()).data.user;
       const { data: row } = await sb.from("profiles_public").select("handle").eq("id", me.id).maybeSingle();
-      await showDebatePage(row?.handle);
-      return;
+      await showDebatePage(row?.handle); return;
     }
-    await showDebatePage(h);
-    return;
+    await showDebatePage(h); return;
   }
 
-  if (hash === "#/profile") {
-    if (!session) { location.hash = "#/login"; return; }
-    await loadMyProfile();
-    showOnly(els.priv);
-    return;
+  if (hash === "#/profile"){
+    if (!session){ location.hash="#/login"; return; }
+    await loadMyProfile(); showOnly(els.priv); return;
   }
 
-  // default
   showOnly(els.login);
 }
 
 /* ---------- Auth ---------- */
-async function loginCore() {
-  const uname = (els.loginUsername.value || "").trim();
+const login = withBusyById("btn-login", async function(){
+  const uname = (els.loginUsername.value||"").trim();
   const password = els.loginPassword.value;
   if (!uname || !password) return alert("Enter username and password");
 
   let email = null;
-
   if (uname.includes("@")) {
     email = uname;
   } else {
-    // Treat username as handle → resolve to email
-    const { data: pubRow, error: pubErr } = await sb
-      .from("profiles_public").select("id").eq("handle", uname.toLowerCase()).maybeSingle();
-    if (pubErr) { console.error(pubErr); return alert("Could not look up handle"); }
+    const { data: pubRow, error: pubErr } =
+      await sb.from("profiles_public").select("id").eq("handle", uname.toLowerCase()).maybeSingle();
+    if (pubErr){ log("<span class='err'>lookup handle:</span>", pubErr.message); return alert("Could not look up handle"); }
     if (!pubRow?.id) return alert("Handle not found");
 
-    const { data: privRow, error: privErr } = await sb
-      .from("profiles_private").select("email").eq("id", pubRow.id).maybeSingle();
-    if (privErr) { console.error(privErr); return alert("Could not resolve email"); }
+    const { data: privRow, error: privErr } =
+      await sb.from("profiles_private").select("email").eq("id", pubRow.id).maybeSingle();
+    if (privErr){ log("<span class='err'>resolve email:</span>", privErr.message); return alert("Could not resolve email"); }
     if (!privRow?.email) return alert("No email on file for this user");
     email = privRow.email;
   }
 
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) { log("<span class='err'>signIn:</span>", error.message); throw error; }
 
   location.hash = "#/profile";
-}
+});
 
-async function signupCore() {
+const signup = withBusyById("btn-signup", async function(){
   const name = els.signupName.value.trim();
   const handle = els.signupHandle.value.trim().toLowerCase();
   const email = els.signupEmail.value.trim();
   const password = els.signupPassword.value;
   const phone = els.signupPhone.value.trim();
-  const address = els.signupAddress.value?.trim();
   const isPrivate = !!els.signupPrivate.checked;
 
   if (!name) return alert("Enter your name");
@@ -189,15 +181,13 @@ async function signupCore() {
   if (!(await handleAvailable(handle))) return alert("Handle is taken");
   if (!email || !password) return alert("Email & password required");
 
-  // Sign up (works whether email confirmations are ON or OFF)
-  const { data: sign, error: signErr } = await sb.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: EMAIL_REDIRECT_URL }, // safe even if confirmations are disabled
-  });
-  if (signErr) throw signErr;
+  log("<b>Signup:</b>", {email, handle});
 
-  // If confirmations are ON, session may be null until email link clicked
+  const { data: sign, error: signErr } = await sb.auth.signUp({
+    email, password, options: { emailRedirectTo: EMAIL_REDIRECT_URL }
+  });
+  if (signErr){ log("<span class='err'>signUp:</span>", signErr.message); throw signErr; }
+
   let session = sign.session || (await ensureSession(email, password));
   if (!session) {
     alert("Account created. Check your email to confirm, then sign in.");
@@ -208,233 +198,161 @@ async function signupCore() {
   const userId = session.user.id;
 
   // Public profile
-  const { error: pubErr } = await sb.from("profiles_public").upsert({
-    id: userId,
-    handle,
-    display_name: name,
-    is_private: isPrivate,
-    is_searchable: !isPrivate
+  const up1 = await sb.from("profiles_public").upsert({
+    id: userId, handle, display_name: name, is_private: isPrivate, is_searchable: !isPrivate
   }, { onConflict: "id" });
-  if (pubErr) throw pubErr;
+  if (up1.error){ log("<span class='err'>profiles_public:</span>", up1.error.message); throw up1.error; }
 
-  // Private profile
-  const { error: privErr } = await sb.from("profiles_private").upsert({
-    id: userId,
-    email,
-    phone: phone || null,
-    address: address || null,
-    preferred_contact: phone ? "sms" : "email",
+  // Private profile (no 'address' column here to avoid schema mismatch)
+  const up2 = await sb.from("profiles_private").upsert({
+    id: userId, email, phone: phone || null, preferred_contact: phone ? "sms" : "email"
   }, { onConflict: "id" });
-  if (privErr) throw privErr;
+  if (up2.error){ log("<span class='err'>profiles_private:</span>", up2.error.message); throw up2.error; }
 
   // Debate page
-  const { error: debErr } = await sb.from("debate_pages").upsert({
-    id: userId,
-    handle,
-    title: `${name || handle}'s Debates`,
-    description: "Debate topics and positions."
+  const up3 = await sb.from("debate_pages").upsert({
+    id: userId, handle, title: `${name || handle}'s Debates`, description: "Debate topics and positions."
   }, { onConflict: "id" });
-  if (debErr) throw debErr;
+  if (up3.error){ log("<span class='err'>debate_pages:</span>", up3.error.message); throw up3.error; }
 
   alert("Account ready!");
   location.hash = isPrivate ? "#/profile" : `#/u/${handle}`;
-}
+});
 
-const login = withBusy(document.getElementById("btn-login"), loginCore);
-const signup = withBusy(document.getElementById("btn-signup"), signupCore);
-
-async function logout(e) {
-  e?.preventDefault?.();
-  await sb.auth.signOut();
-  location.hash = "#/login";
-}
+async function logout(e){ e?.preventDefault?.(); await sb.auth.signOut(); location.hash="#/login"; }
 
 /* ---------- Private profile ---------- */
-async function loadMyProfile() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return;
+async function loadMyProfile(){
+  const { data:{ user } } = await sb.auth.getUser(); if(!user) return;
 
-  const { data: pubRow } = await sb
-    .from("profiles_public")
+  const pub = await sb.from("profiles_public")
     .select("handle, display_name, bio, city, avatar_url, is_private")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  els.ppHandle.value = pubRow?.handle || "";
-  els.ppDisplay.value = pubRow?.display_name || "";
-  els.ppBio.value = pubRow?.bio || "";
-  els.ppCity.value = pubRow?.city || "";
-  els.ppAvatar.value = pubRow?.avatar_url || "";
-
-  const { data: privRow } = await sb
-    .from("profiles_private")
-    .select("email, phone")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  els.prEmail.value = privRow?.email || "";
-  els.prPhone.value = privRow?.phone || "";
-
-  if (document.getElementById("public-link")) {
-    document.getElementById("public-link").href = `#/u/${(els.ppHandle.value || "").toLowerCase()}`;
+    .eq("id", user.id).maybeSingle();
+  if (!pub.error && pub.data){
+    els.ppHandle.value = pub.data.handle || "";
+    els.ppDisplay.value = pub.data.display_name || "";
+    els.ppBio.value    = pub.data.bio || "";
+    els.ppCity.value   = pub.data.city || "";
+    els.ppAvatar.value = pub.data.avatar_url || "";
   }
+
+  const priv = await sb.from("profiles_private")
+    .select("email, phone").eq("id", user.id).maybeSingle();
+  if (!priv.error && priv.data){
+    els.prEmail.value = priv.data.email || "";
+    els.prPhone.value = priv.data.phone || "";
+  }
+
+  const link = document.getElementById("public-link");
+  if (link) link.href = `#/u/${(els.ppHandle.value||"").toLowerCase()}`;
 }
 
-async function saveProfile() {
-  try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) return alert("Not signed in");
+async function saveProfile(){
+  try{
+    const { data:{ user } } = await sb.auth.getUser(); if (!user) return alert("Not signed in");
+    const handle = (els.ppHandle.value||"").toLowerCase();
 
-    const handle = (els.ppHandle.value || "").toLowerCase();
+    const u1 = await sb.from("profiles_public").upsert({
+      id:user.id, handle, display_name: els.ppDisplay.value||null,
+      bio: els.ppBio.value||null, city: els.ppCity.value||null, avatar_url: els.ppAvatar.value||null,
+    }, { onConflict:"id" });
+    if (u1.error) throw u1.error;
 
-    const { error: pubErr } = await sb.from("profiles_public").upsert({
-      id: user.id,
-      handle,
-      display_name: els.ppDisplay.value || null,
-      bio: els.ppBio.value || null,
-      city: els.ppCity.value || null,
-      avatar_url: els.ppAvatar.value || null,
-    }, { onConflict: "id" });
-    if (pubErr) throw pubErr;
-
-    const { error: privErr } = await sb.from("profiles_private").upsert({
-      id: user.id,
-      email: els.prEmail.value || null,
-      phone: els.prPhone.value || null,
-    }, { onConflict: "id" });
-    if (privErr) throw privErr;
+    const u2 = await sb.from("profiles_private").upsert({
+      id:user.id, email: els.prEmail.value||null, phone: els.prPhone.value||null,
+    }, { onConflict:"id" });
+    if (u2.error) throw u2.error;
 
     alert("Profile saved");
-    if (document.getElementById("public-link")) {
-      document.getElementById("public-link").href = `#/u/${handle}`;
-    }
-  } catch (e) {
-    console.log("Save profile error:", e);
+    const link = document.getElementById("public-link");
+    if (link) link.href = `#/u/${handle}`;
+  } catch(e){
+    log("<span class='err'>saveProfile:</span>", e?.message||e);
     alert("Save failed: " + (e?.message || e));
   }
 }
 
 /* ---------- Public profile ---------- */
-async function showPublicProfile(handle) {
+async function showPublicProfile(handle){
   showOnly(els.pub);
-
-  if (!handle) {
-    els.pubDisplay.textContent = "Profile not found";
-    els.pubHandle.textContent = "";
-    els.pubBio.textContent = "";
-    els.pubCity.textContent = "";
-    els.pubAvatar?.removeAttribute("src");
+  if (!handle){
+    els.pubDisplay.textContent="Profile not found"; els.pubHandle.textContent="";
+    els.pubBio.textContent=""; els.pubCity.textContent=""; els.pubAvatar?.removeAttribute("src");
     return;
   }
-
-  const { data: row, error } = await sb
-    .from("profiles_public")
+  const { data:row, error } = await sb.from("profiles_public")
     .select("display_name, handle, bio, city, avatar_url, is_private, is_searchable")
-    .eq("handle", handle)
-    .maybeSingle();
-
-  if (!row || error) {
-    els.pubDisplay.textContent = "Profile not found";
-    els.pubHandle.textContent = "";
-    els.pubBio.textContent = "";
-    els.pubCity.textContent = "";
-    els.pubAvatar?.removeAttribute("src");
+    .eq("handle", handle).maybeSingle();
+  if (!row || error){
+    els.pubDisplay.textContent="Profile not found"; els.pubHandle.textContent="";
+    els.pubBio.textContent=""; els.pubCity.textContent=""; els.pubAvatar?.removeAttribute("src");
     return;
   }
-
   els.pubDisplay.textContent = row.display_name || row.handle;
-  els.pubHandle.textContent = `@${row.handle}`;
-  els.pubBio.textContent = row.bio || "";
-  els.pubCity.textContent = row.city || "";
-  if (row.avatar_url) els.pubAvatar.src = row.avatar_url;
-  else els.pubAvatar?.removeAttribute("src");
+  els.pubHandle.textContent  = `@${row.handle}`;
+  els.pubBio.textContent     = row.bio || "";
+  els.pubCity.textContent    = row.city || "";
+  if (row.avatar_url) els.pubAvatar.src = row.avatar_url; else els.pubAvatar?.removeAttribute("src");
 }
 
 /* ---------- Debate page ---------- */
-async function showDebatePage(handle) {
+async function showDebatePage(handle){
   showOnly(els.debate);
-
-  if (!handle) {
-    els.debTitle.textContent = "Debates";
-    els.debDesc.textContent = "No handle given.";
-    els.debContent.innerHTML = "";
+  if (!handle){
+    els.debTitle.textContent="Debates"; els.debDesc.textContent="No handle given."; els.debContent.innerHTML="";
     return;
   }
-
-  const { data: deb, error } = await sb
-    .from("debate_pages")
-    .select("title, description, is_public, handle")
-    .eq("handle", handle)
-    .maybeSingle();
-
-  if (!deb || error) {
-    els.debTitle.textContent = "Debate page not found";
-    els.debDesc.textContent = "";
-    els.debContent.innerHTML = "";
+  const { data:deb, error } = await sb.from("debate_pages")
+    .select("title, description, is_public, handle").eq("handle", handle).maybeSingle();
+  if (!deb || error){
+    els.debTitle.textContent="Debate page not found"; els.debDesc.textContent=""; els.debContent.innerHTML="";
     return;
   }
-
   els.debTitle.textContent = deb.title || `@${deb.handle} · Debates`;
-  els.debDesc.textContent = deb.description || (deb.is_public ? "Public debates" : "Private (hidden) debates");
+  els.debDesc.textContent  = deb.description || (deb.is_public ? "Public debates" : "Private (hidden) debates");
   els.debContent.innerHTML = '<p class="hint">Threads coming soon.</p>';
 }
 
 /* ---------- Robust click delegation + boot ---------- */
-window.addEventListener("error", (e) => console.error("JS error:", e.message, e.error));
+window.addEventListener("error", (e) => { log("<span class='err'>JS error:</span>", e.message); });
 
-function delegateClicks() {
+function delegateClicks(){
   document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLElement)) return;
+    const t = (e.target && e.target.closest) ? e.target.closest("button,a") : e.target;
+    if (!t || !t.id) return;
 
-    if (t.id === "btn-login") {
-      e.preventDefault();
-      login();
-    }
-    if (t.id === "btn-signup") {
-      e.preventDefault();
-      signup();
-    }
-    if (t.id === "go-signup") {
-      e.preventDefault();
-      location.hash = "#/signup";
-    }
-    if (t.id === "go-login") {
-      e.preventDefault();
-      location.hash = "#/login";
-    }
-    if (t.id === "save-profile") {
-      e.preventDefault();
-      saveProfile();
-    }
-    if (t.id === "logout-link") {
-      e.preventDefault();
-      logout(e);
-    }
+    if (t.id === "btn-login"){ e.preventDefault(); window.__onLogin(e); }
+    if (t.id === "btn-signup"){ e.preventDefault(); window.__onSignup(e); }
+    if (t.id === "go-signup"){ e.preventDefault(); location.hash="#/signup"; }
+    if (t.id === "go-login"){ e.preventDefault(); location.hash="#/login"; }
+    if (t.id === "save-profile"){ e.preventDefault(); window.__onSaveProfile(e); }
+    if (t.id === "logout-link"){ e.preventDefault(); logout(e); }
   });
 }
 
-function wire() {
-  // set busy labels
-  const btnLogin = document.getElementById("btn-login");
-  const btnSignup = document.getElementById("btn-signup");
-  if (btnLogin) btnLogin.dataset.busyLabel = "Signing in…";
-  if (btnSignup) btnSignup.dataset.busyLabel = "Creating…";
+function wire(){
+  // expose fallbacks for inline onclick
+  window.__onLogin = () => login();
+  window.__onSignup = () => signup();
+  window.__onSaveProfile = () => saveProfile();
 
-  // enter to submit
-  els.loginPassword?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") document.getElementById("btn-login")?.click();
-  });
-  els.signupPassword?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") document.getElementById("btn-signup")?.click();
-  });
+  // busy labels
+  const bl = document.getElementById("btn-login");
+  const bs = document.getElementById("btn-signup");
+  if (bl) bl.dataset.busyLabel="Signing in…";
+  if (bs) bs.dataset.busyLabel="Creating…";
+
+  // enter submit
+  els.loginPassword?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") document.getElementById("btn-login")?.click(); });
+  els.signupPassword?.addEventListener("keydown", (e)=>{ if (e.key==="Enter") document.getElementById("btn-signup")?.click(); });
 
   delegateClicks();
   window.addEventListener("hashchange", router);
   sb.auth.onAuthStateChange(() => router());
+
+  log("<b>Boot</b>");
+  __ccSelfTest().catch(()=>{});
   router();
 }
 
-document.readyState === "loading"
-  ? document.addEventListener("DOMContentLoaded", wire)
-  : wire();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", wire) : wire();
