@@ -521,6 +521,9 @@ async function loadMyPosts() {
           html += `<div class="mt-1"><video controls src="${escapeHtml(r.media_url)}" style="max-width:100%;"></video></div>`;
         } else if (r.media_type && r.media_type.startsWith && r.media_type.startsWith('image/')) {
           html += `<div class="mt-1"><img src="${escapeHtml(r.media_url)}" style="max-width:100%;"/></div>`;
+        } else if (r.media_type === 'application/pdf') {
+          // Embed PDF inline for preview (falls back to browser download if unsupported)
+          html += `<div class="mt-1"><embed src="${escapeHtml(r.media_url)}" type="application/pdf" width="100%" height="600px" /></div>`;
         } else {
           // Generic file: show a download link
           const filename = (r.media_url || '').split('/').pop();
