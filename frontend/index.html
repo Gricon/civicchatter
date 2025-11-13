@@ -1,21 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Civic Chatter</title>
+
+  <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- PWA -->
+  <!-- PWA (optional) -->
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#002868" />
-  <!--
   <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+      window.addEventListener("load", () =>
+        navigator.serviceWorker.register("/sw.js").catch(() => {})
+      );
     }
-  </script> 
-  -->
+  </script>
+
+  <!-- Supabase SDK must be before app.js; defer preserves order -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -24,98 +30,108 @@
     <h1>Civic Chatter</h1>
     <nav id="nav" class="hidden">
       <a href="#/profile" class="nav-link">My Profile</a>
-      <a id="my-debate-link" href="#/d/me" class="nav-link">My Debate</a>
+      <a href="#/d/me" class="nav-link" id="my-debate-link">My Debate</a>
       <a href="#/login" class="nav-link" id="logout-link">Logout</a>
     </nav>
   </header>
 
-  <main id="main">
-    <!-- Auth / Signup + Login -->
-    <section class="card" id="auth-section">
-      <h2>Create account / Sign in</h2>
-      <div class="grid">
-        <label>
-          Name
-          <input type="text" id="signup-name" placeholder="Your name" />
-        </label>
-        <label>
-          Handle (public @username)
-          <input type="text" id="signup-handle" placeholder="e.g. conrad" />
-          <small class="hint">3+ chars, a–z, 0–9, _ or -</small>
-        </label>
-        <label>
-          Email
-          <input type="email" id="signup-email" placeholder="you@example.com" />
-        </label>
-        <label>
-          Password
-          <input type="password" id="signup-password" placeholder="Your password" />
-        </label>
-        <label>
-          Phone (optional, for SMS requests)
-          <input type="tel" id="signup-phone" placeholder="+63..." />
-        </label>
-        <label class="row" style="margin-top:.25rem">
-          <input type="checkbox" id="signup-private" /> Private account (not searchable)
-        </label>
-      </div>
-      <p class="hint">After login, create your handle and public profile.</p>
+  <main id="main" class="container">
+
+    <!-- LOGIN -->
+    <section id="login-section" class="card">
+      <h2 class="mt-0">Sign in</h2>
+      <p class="hint">Use your <b>handle</b> or <b>email</b> and password.</p>
+
+      <label>Username or Email
+        <input id="login-username" type="text" autocomplete="username" placeholder="yourhandle or you@example.com" />
+      </label>
+      <label>Password
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </label>
+
       <div class="row">
-        <button id="btn-signup" class="button--primary">Sign Up</button>
-        <button id="btn-login" class="button--ghost">Sign In</button>
+        <button id="btn-login" type="button" class="button--primary">Sign In</button>
+        <button id="go-signup" type="button" class="button--ghost">Create account</button>
       </div>
     </section>
 
-    <!-- Private Profile (owner-only) -->
-    <section class="card hidden" id="private-profile">
-      <h2>My Private Profile</h2>
+    <!-- SIGNUP -->
+    <section id="signup-section" class="card hidden">
+      <h2 class="mt-0">Create account</h2>
       <div class="grid">
-        <label>
-          Handle (public URL)
+        <label>Name
+          <input id="signup-name" type="text" placeholder="Your name" />
+        </label>
+        <label>Handle (public @username)
+          <input id="signup-handle" type="text" placeholder="e.g. conrad" />
+          <small class="hint">3+ chars: a–z, 0–9, _ or -</small>
+        </label>
+        <label>Email
+          <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
+        <label>Phone (optional)
+          <input id="signup-phone" type="tel" placeholder="+63..." />
+        </label>
+        <label>Password
+          <input id="signup-password" type="password" autocomplete="new-password" placeholder="Create a password" />
+        </label>
+        <label>Address (optional)
+          <input id="signup-address" type="text" placeholder="Address" />
+        </label>
+      </div>
+      <label class="row" style="margin-top:.25rem">
+        <input id="signup-private" type="checkbox" /> Private account (not searchable)
+      </label>
+
+      <div class="row">
+        <button id="btn-signup" type="button" class="button--primary">Create Account</button>
+        <button id="go-login" type="button" class="button--ghost">Back to login</button>
+      </div>
+    </section>
+
+    <!-- PRIVATE PROFILE (owner-only) -->
+    <section class="card hidden" id="private-profile">
+      <h2 class="mt-0">My Private Profile</h2>
+      <div class="grid">
+        <label>Handle (public URL)
           <input type="text" id="pp-handle" placeholder="e.g. conrad" />
         </label>
-        <label>
-          Display Name
+        <label>Display Name
           <input type="text" id="pp-display-name" placeholder="e.g. Conrad G." />
         </label>
-        <label>
-          Bio
+        <label>Bio
           <textarea id="pp-bio" placeholder="Short bio"></textarea>
         </label>
-        <label>
-          City
+        <label>City
           <input type="text" id="pp-city" placeholder="e.g. Manila" />
         </label>
-        <label>
-          Avatar URL
+        <label>Avatar URL
           <input type="url" id="pp-avatar-url" placeholder="https://..." />
         </label>
       </div>
 
       <h3>Private Details (not public)</h3>
       <div class="grid">
-        <label>
-          Email
+        <label>Email
           <input type="email" id="pr-email" placeholder="user@example.com" />
         </label>
-        <label>
-          Phone
+        <label>Phone
           <input type="tel" id="pr-phone" placeholder="+63..." />
         </label>
       </div>
 
       <div class="row">
-        <button id="save-profile">Save Profile</button>
+        <button id="save-profile" type="button">Save Profile</button>
         <a id="public-link" class="link" href="#">View Public Page</a>
       </div>
     </section>
 
-    <!-- Public Profile (read-only) -->
+    <!-- PUBLIC PROFILE (read-only) -->
     <section class="card hidden" id="public-profile">
       <div class="public-header">
         <img id="pub-avatar" alt="avatar" class="avatar" />
         <div>
-          <h2 id="pub-display-name"></h2>
+          <h2 id="pub-display-name" class="mt-0 mb-0"></h2>
           <p class="handle" id="pub-handle"></p>
           <p class="city" id="pub-city"></p>
         </div>
@@ -123,15 +139,13 @@
       <p id="pub-bio"></p>
     </section>
 
-    <!-- Debate Page -->
+    <!-- DEBATE PAGE -->
     <section class="card hidden" id="debate-page">
-      <h2 id="deb-title">Debates</h2>
+      <h2 id="deb-title" class="mt-0">Debates</h2>
       <p id="deb-desc" class="hint"></p>
       <div id="deb-content" style="margin-top:1rem;"></div>
     </section>
-  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  </main>
 </body>
 </html>
