@@ -37,6 +37,26 @@ function writeValue(id, value) {
   if ("value" in el) el.value = value ?? "";
 }
 
+async function withBusyButton(buttonId, busyText, fn) {
+  const btn = byId(buttonId);
+  const originalDisabled = btn.disabled;
+  const originalAriaBusy = btn.getAttribute("aria-busy");
+  const originalHtml = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.setAttribute("aria-busy", "true");
+  if (busyText) btn.textContent = busyText;
+
+  try {
+    return await fn();
+  } finally {
+    btn.disabled = originalDisabled;
+    if (originalAriaBusy === null) btn.removeAttribute("aria-busy");
+    else btn.setAttribute("aria-busy", originalAriaBusy);
+    btn.innerHTML = originalHtml;
+  }
+}
+
 function isValidHandle(h) {
   return /^[a-z0-9_-]{3,}$/.test((h || "").toLowerCase());
 }
@@ -161,45 +181,47 @@ window.showLogin  = showLogin;
 
 // ---- SIGNUP ----
 async function ccSignup() {
-  try {
-    const name   = readValue("signup-name");
-    const handle = readValue("signup-handle", { lowercase: true });
-    const email  = readValue("signup-email");
-    const phone  = readValue("signup-phone");
-    const passwd = byId("signup-password").value;
-    const isPriv = byId("signup-private").checked;
+  await withBusyButton("btn-signup", "Creating…", async () => {
+    try {
+      const name   = readValue("signup-name");
+      const handle = readValue("signup-handle", { lowercase: true });
+      const email  = readValue("signup-email");
+      const phone  = readValue("signup-phone");
+      const passwd = byId("signup-password").value;
+      const isPriv = byId("signup-private").checked;
 
-    if (!name) return alert("Enter your name");
-    if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
-    if (!email || !passwd) return alert("Email & password required");
+      if (!name) return alert("Enter your name");
+      if (!isValidHandle(handle)) return alert("Handle must be 3+ chars: a–z, 0–9, _ or -");
+      if (!email || !passwd) return alert("Email & password required");
 
-    await ensureHandleAvailable(handle);
+      await ensureHandleAvailable(handle);
 
-    const { data: signData, error: signError } = await sb.auth.signUp({
-      email,
-      password: passwd,
-      // if you re-enable confirmations later, you can add:
-      // options: { emailRedirectTo: "https://civicchatter.netlify.app/auth-callback.html" },
-    });
+      const { data: signData, error: signError } = await sb.auth.signUp({
+        email,
+        password: passwd,
+        // if you re-enable confirmations later, you can add:
+        // options: { emailRedirectTo: "https://civicchatter.netlify.app/auth-callback.html" },
+      });
 
-    if (signError) {
-      throw signError;
+      if (signError) {
+        throw signError;
+      }
+
+      const user = signData.user;
+      if (!user) {
+        throw new Error("Signup succeeded but no user returned. Check Supabase Auth settings.");
+      }
+
+      const userId = user.id;
+      await createInitialRecords({ userId, handle, name, email, phone, isPrivate: isPriv });
+
+      alert("Account and pages created successfully!");
+      showSection("private-profile");
+      await loadMyProfile();
+    } catch (err) {
+      handleActionError("signup", err);
     }
-
-    const user = signData.user;
-    if (!user) {
-      throw new Error("Signup succeeded but no user returned. Check Supabase Auth settings.");
-    }
-
-    const userId = user.id;
-    await createInitialRecords({ userId, handle, name, email, phone, isPrivate: isPriv });
-
-    alert("Account and pages created successfully!");
-    showSection("private-profile");
-    await loadMyProfile();
-  } catch (err) {
-    handleActionError("signup", err);
-  }
+  });
 }
 window.ccSignup = ccSignup; // make global
 
