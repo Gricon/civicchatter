@@ -134,6 +134,16 @@ header h1 {
   transition: background 0.2s, opacity 0.2s;
 }
 
+/* Ensure nav anchors and logout link never show underlines (explicit for visited states) */
+.nav-link:visited,
+.nav-link:active,
+.logout-btn,
+.logout-btn:visited,
+.logout-btn:active {
+  text-decoration: none;
+  color: #fff;
+}
+
 .nav-link:hover,
 .nav-link[aria-current="page"] {
   opacity: 1;
