@@ -856,6 +856,20 @@ async function handleCartoonizeAndUploadAvatar() {
     if (!publicUrl) throw new Error('Failed to get public URL from storage');
     // set avatar input (so saving profile will persist it too)
     writeValue('sp-avatar-input', publicUrl);
+    // Also update the private-profile avatar input so the change is visible
+    // immediately across the UI without requiring an explicit Save click.
+    writeValue('pp-avatar-url', publicUrl);
+    // Update visible avatar elements if present
+    try {
+      const pubAvatarEl = byId('pub-avatar');
+      const spAvatarEl = byId('sp-avatar');
+      const myAvatarSmallEl = byId('my-avatar-small');
+      if (pubAvatarEl) pubAvatarEl.src = publicUrl;
+      if (spAvatarEl) spAvatarEl.src = publicUrl;
+      if (myAvatarSmallEl) myAvatarSmallEl.src = publicUrl;
+    } catch (e) {
+      console.warn('Failed to update avatar elements directly', e);
+    }
     if (status) status.textContent = 'Uploaded';
     if (progressBar) progressBar.style.width = '100%';
     if (progressText) progressText.textContent = 'Done';
