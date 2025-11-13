@@ -548,6 +548,130 @@ async function handleDeleteAccount() {
   }
 }
 
+// ----- Client-side cartoonize (OpenCV) + upload to Supabase Storage -----
+function ensureCvReady() {
+  return new Promise((resolve) => {
+    if (window.cv && (window.cv.ready || window.cv.onRuntimeInitialized)) return resolve();
+    // opencv.js sets onRuntimeInitialized when loaded
+    const wait = () => {
+      if (window.cv && (window.cv.ready || window.cv.onRuntimeInitialized)) return resolve();
+      setTimeout(wait, 100);
+    };
+    wait();
+  });
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function cartoonizeFile(file, { maxDim = 800 } = {}) {
+  await ensureCvReady();
+  const img = await loadImageFromFile(file);
+
+  const w = img.width;
+  const h = img.height;
+  let scale = 1;
+  if (Math.max(w, h) > maxDim) scale = maxDim / Math.max(w, h);
+  const cw = Math.round(w * scale);
+  const ch = Math.round(h * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, cw, ch);
+
+  let src = cv.imread(canvas);
+  let srcRgb = new cv.Mat();
+  cv.cvtColor(src, srcRgb, cv.COLOR_RGBA2RGB);
+
+  // Color smoothing
+  let color = new cv.Mat();
+  cv.pyrMeanShiftFiltering(srcRgb, color, 20, 40, 1);
+
+  // Edges
+  let gray = new cv.Mat();
+  cv.cvtColor(srcRgb, gray, cv.COLOR_RGB2GRAY);
+  let blurred = new cv.Mat();
+  cv.medianBlur(gray, blurred, 7);
+  let edges = new cv.Mat();
+  cv.adaptiveThreshold(blurred, edges, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 9, 2);
+
+  let edgesColor = new cv.Mat();
+  cv.cvtColor(edges, edgesColor, cv.COLOR_GRAY2RGB);
+  let dst = new cv.Mat();
+  cv.bitwise_and(color, edgesColor, dst);
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = cw;
+  outCanvas.height = ch;
+  cv.imshow(outCanvas, dst);
+
+  // cleanup
+  src.delete(); srcRgb.delete(); color.delete();
+  gray.delete(); blurred.delete(); edges.delete(); edgesColor.delete(); dst.delete();
+
+  return outCanvas.toDataURL('image/png');
+}
+
+function dataURLToBlob(dataURL) {
+  const parts = dataURL.split(',');
+  const mime = parts[0].match(/:(.*?);/)[1];
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
+
+async function uploadAvatarBlob(blob, filename) {
+  // Upload to Supabase Storage 'avatars' bucket. Bucket must exist and allow uploads by anon role.
+  const path = `${filename}`;
+  const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true });
+  if (upErr) throw upErr;
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+async function handleCartoonizeAndUploadAvatar() {
+  const fileEl = byId('sp-avatar-file');
+  const status = byId('sp-cartoon-status');
+  const preview = byId('sp-avatar-preview');
+  if (!fileEl || !fileEl.files || !fileEl.files[0]) return alert('Choose an image file first');
+  const file = fileEl.files[0];
+  try {
+    if (status) { status.textContent = 'Processing…'; }
+    const dataUrl = await cartoonizeFile(file, { maxDim: 800 });
+    if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+    const blob = dataURLToBlob(dataUrl);
+    // upload to storage
+    const { data: userData } = await sb.auth.getUser();
+    const user = userData?.user;
+    if (!user) throw new Error('Not signed in');
+    const filename = `${user.id}.png`;
+    const publicUrl = await uploadAvatarBlob(blob, filename);
+    if (!publicUrl) throw new Error('Failed to get public URL from storage');
+    // set avatar input (so saving profile will persist it too)
+    writeValue('sp-avatar-input', publicUrl);
+    if (status) status.textContent = 'Uploaded';
+    // auto-save the profile avatar URL (upsert private/public rows as needed)
+    // we only update the public profile avatar_url here
+    const { error: pubErr } = await sb.from('profiles_public').upsert({ id: user.id, avatar_url: publicUrl }, { onConflict: 'id' });
+    if (pubErr) console.warn('Failed to save avatar url to profiles_public:', pubErr);
+    // refresh UI
+    await loadMyProfile();
+  } catch (err) {
+    alertActionError('cartoonize upload', err);
+    if (status) status.textContent = '';
+  }
+}
+
 async function handleSaveProfile() {
   try {
     const user = await requireUser();
@@ -819,6 +943,19 @@ function attachEventListeners() {
   byId('settings-save-profile')?.addEventListener('click', (e) => {
     e.preventDefault();
     handleSaveSettingsProfile();
+  });
+  // avatar cartoonize upload handlers
+  byId('sp-avatar-file')?.addEventListener('change', (e) => {
+    const img = byId('sp-avatar-preview');
+    const file = e.target.files && e.target.files[0];
+    if (file && img) {
+      img.src = URL.createObjectURL(file);
+      img.style.display = 'block';
+    }
+  });
+  byId('sp-cartoonize')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleCartoonizeAndUploadAvatar();
   });
   byId('security-change-password')?.addEventListener('click', (e) => {
     e.preventDefault();
