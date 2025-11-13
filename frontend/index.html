@@ -19,6 +19,7 @@
       <a href="#/profile" id="nav-private-profile" class="nav-link">My Profile</a>
       <a href="#/u/" id="nav-public-profile" class="nav-link">My Public Profile</a>
       <a href="#/d/me" id="nav-debates" class="nav-link">Debates</a>
+      <a href="#/settings" id="nav-settings" class="nav-link">Settings</a>
       <a href="#" id="logout-link" class="logout-btn">Logout</a>
     </nav>
   </header>
@@ -157,6 +158,55 @@
 
       <div class="mt-2">
         <a href="#/profile" class="button--ghost">Back to My Profile</a>
+      </div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section id="settings-page" class="card hidden">
+      <h2>Site Settings</h2>
+      <p class="hint">Customize the site appearance. Changes are saved in your browser.</p>
+
+      <div class="grid">
+        <label>Base font size (px)
+          <input id="settings-font-size" type="range" min="12" max="24" value="16" />
+          <div class="help"><span id="settings-font-size-val">16</span>px</div>
+        </label>
+
+        <label>Writing orientation
+          <select id="settings-writing-mode">
+            <option value="horizontal-tb">Horizontal (normal)</option>
+            <option value="vertical-rl">Vertical (right-to-left)</option>
+          </select>
+        </label>
+
+        <label>
+          <input id="settings-font-italic" type="checkbox" /> Use italic font style
+        </label>
+
+        <label>Background type
+          <div class="row">
+            <label class="row"><input type="radio" name="bgtype" value="color" id="bgtype-color" checked /> Color</label>
+            <label class="row"><input type="radio" name="bgtype" value="image" id="bgtype-image" /> Image URL</label>
+          </div>
+        </label>
+
+        <label id="bg-color-label">Background color
+          <input id="settings-bg-color" type="color" value="#f5f5f5" />
+        </label>
+
+        <label id="bg-image-label" class="hidden">Background image URL
+          <input id="settings-bg-image" type="url" placeholder="https://..." />
+        </label>
+
+        <div>
+          <div class="help">Preview</div>
+          <div id="settings-preview" class="card mt-1" style="padding:1rem;">The quick brown fox jumps over the lazy dog.</div>
+        </div>
+      </div>
+
+      <div class="row mt-2">
+        <button id="settings-save" class="button--primary">Save Settings</button>
+        <button id="settings-reset" class="button--ghost">Reset</button>
       </div>
     </section>
 

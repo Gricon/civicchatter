@@ -12,6 +12,13 @@
   --ring: #3b82f6;           /* focus ring blue */
   --border: #e2e8f0;         /* slate-200 */
 
+  /* Customizable site settings (overridden by settings UI) */
+  --base-font-size: 16px;
+  --site-bg-color: var(--bg);
+  --site-bg-image: none;
+  --site-writing-mode: horizontal-tb;
+  --site-font-style: normal;
+
   /* layout + rhythm */
   --radius: 12px;
   --radius-sm: 8px;
@@ -42,13 +49,19 @@
 
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-  background: var(--bg);
+    background-color: var(--site-bg-color);
+    background-image: var(--site-bg-image);
+    background-size: cover;
+    background-position: center;
   color: var(--text);
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+    font-size: var(--base-font-size);
+    writing-mode: var(--site-writing-mode);
+    font-style: var(--site-font-style);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

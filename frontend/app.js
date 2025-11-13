@@ -376,13 +376,26 @@ async function loadMyProfile() {
 
     const { data: privRow } = await sb
       .from("profiles_private")
-      .select("email, phone")
+      .select("email, phone, site_settings")
       .eq("id", user.id)
       .maybeSingle();
 
     if (privRow) {
       writeValue("pr-email", privRow.email || "");
       writeValue("pr-phone", privRow.phone || "");
+
+      // If the user has site settings stored server-side, apply them and
+      // persist locally so they take effect across devices.
+      if (privRow.site_settings) {
+        try {
+          localStorage.setItem('siteSettings', JSON.stringify(privRow.site_settings));
+          applySettings(privRow.site_settings);
+          // update the settings form inputs if visible
+          loadSettingsIntoForm();
+        } catch (e) {
+          console.warn('Failed to apply site settings from DB', e);
+        }
+      }
     }
   } catch (err) {
     alertActionError("profile load", err);
@@ -630,6 +643,143 @@ function attachEventListeners() {
   window.addEventListener("hashchange", () => {
     router().catch((err) => console.error("router error", err));
   });
+
+  // Settings page handlers
+  byId('nav-settings')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.hash = '#/settings';
+  });
+  byId('settings-save')?.addEventListener('click', handleSaveSettings);
+  byId('settings-reset')?.addEventListener('click', handleResetSettings);
+  // live preview controls
+  const fontRange = byId('settings-font-size');
+  const fontVal = byId('settings-font-size-val');
+  fontRange?.addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (fontVal) fontVal.textContent = v;
+    applySettings({ fontSize: Number(v) });
+  });
+  byId('settings-writing-mode')?.addEventListener('change', (e) => {
+    applySettings({ writingMode: e.target.value });
+  });
+  byId('settings-font-italic')?.addEventListener('change', (e) => {
+    applySettings({ italic: e.target.checked });
+  });
+  byId('bgtype-color')?.addEventListener('change', toggleBgInputs);
+  byId('bgtype-image')?.addEventListener('change', toggleBgInputs);
+  byId('settings-bg-color')?.addEventListener('input', (e) => applySettings({ bgColor: e.target.value }));
+  byId('settings-bg-image')?.addEventListener('input', (e) => applySettings({ bgImage: e.target.value }));
+}
+
+// Settings: apply, load, save
+function applySettings(partial = {}) {
+  // read existing
+  const cur = JSON.parse(localStorage.getItem('siteSettings') || '{}');
+  const s = Object.assign({}, cur, partial);
+  if (s.fontSize) document.documentElement.style.setProperty('--base-font-size', s.fontSize + 'px');
+  if (s.writingMode) document.documentElement.style.setProperty('--site-writing-mode', s.writingMode);
+  if (typeof s.italic !== 'undefined') document.documentElement.style.setProperty('--site-font-style', s.italic ? 'italic' : 'normal');
+  if (s.bgColor) document.documentElement.style.setProperty('--site-bg-color', s.bgColor);
+  if (s.bgImage) document.documentElement.style.setProperty('--site-bg-image', s.bgImage ? 'url(' + s.bgImage + ')' : 'none');
+  // update preview if present
+  const preview = byId('settings-preview');
+  if (preview) {
+    preview.style.fontSize = (s.fontSize ? s.fontSize + 'px' : getComputedStyle(document.documentElement).getPropertyValue('--base-font-size'));
+    preview.style.fontStyle = s.italic ? 'italic' : 'normal';
+  }
+  // persist merged
+  localStorage.setItem('siteSettings', JSON.stringify(s));
+}
+
+function loadSettingsIntoForm() {
+  const s = JSON.parse(localStorage.getItem('siteSettings') || '{}');
+  if (s.fontSize) {
+    const r = byId('settings-font-size');
+    const v = byId('settings-font-size-val');
+    if (r) r.value = s.fontSize;
+    if (v) v.textContent = s.fontSize;
+  }
+  if (s.writingMode) {
+    const w = byId('settings-writing-mode');
+    if (w) w.value = s.writingMode;
+  }
+  if (typeof s.italic !== 'undefined') {
+    const i = byId('settings-font-italic');
+    if (i) i.checked = s.italic;
+  }
+  if (s.bgColor) {
+    const c = byId('settings-bg-color');
+    if (c) c.value = s.bgColor;
+  }
+  if (s.bgImage) {
+    const img = byId('settings-bg-image');
+    if (img) img.value = s.bgImage;
+  }
+  // show/hide inputs
+  toggleBgInputs();
+  applySettings(s);
+}
+
+async function handleSaveSettings(e) {
+  e.preventDefault();
+  const fontSize = Number(readValue('settings-font-size')) || 16;
+  const writingMode = readValue('settings-writing-mode') || 'horizontal-tb';
+  const italic = !!byId('settings-font-italic')?.checked;
+  const bgColor = readValue('settings-bg-color') || getComputedStyle(document.documentElement).getPropertyValue('--site-bg-color').trim();
+  const bgImage = readValue('settings-bg-image');
+  const payload = { fontSize, writingMode, italic, bgColor, bgImage };
+
+  // Persist locally first so changes are immediate
+  localStorage.setItem('siteSettings', JSON.stringify(payload));
+  applySettings(payload);
+
+  // If the user is authenticated, persist to the DB for cross-device sync.
+  try {
+    const { data: userData } = await sb.auth.getUser();
+    const user = userData?.user;
+    if (user && user.id) {
+      const { error } = await sb.from('profiles_private').upsert(
+        { id: user.id, site_settings: payload },
+        { onConflict: 'id' }
+      );
+      if (error) console.warn('Failed to save settings to DB:', error);
+    }
+  } catch (err) {
+    console.warn('Error saving settings to DB (user may be unauthenticated):', err);
+  }
+
+  alert('Settings saved (in your browser)');
+}
+
+function handleResetSettings(e) {
+  e.preventDefault();
+  localStorage.removeItem('siteSettings');
+  // restore defaults
+  document.documentElement.style.removeProperty('--base-font-size');
+  document.documentElement.style.removeProperty('--site-writing-mode');
+  document.documentElement.style.removeProperty('--site-font-style');
+  document.documentElement.style.removeProperty('--site-bg-color');
+  document.documentElement.style.removeProperty('--site-bg-image');
+  // reset UI
+  const r = byId('settings-font-size'); if (r) r.value = 16; const v = byId('settings-font-size-val'); if (v) v.textContent = '16';
+  const w = byId('settings-writing-mode'); if (w) w.value = 'horizontal-tb';
+  const i = byId('settings-font-italic'); if (i) i.checked = false;
+  const c = byId('settings-bg-color'); if (c) c.value = '#f5f5f5';
+  const img = byId('settings-bg-image'); if (img) img.value = '';
+  toggleBgInputs();
+}
+
+function toggleBgInputs() {
+  const isImage = !!byId('bgtype-image')?.checked;
+  const colorLabel = byId('bg-color-label');
+  const imageLabel = byId('bg-image-label');
+  if (isImage) {
+    if (colorLabel) colorLabel.classList.add('hidden');
+    if (imageLabel) imageLabel.classList.remove('hidden');
+  } else {
+    if (colorLabel) colorLabel.classList.remove('hidden');
+    if (imageLabel) imageLabel.classList.add('hidden');
+  }
 }
 
 // ------------ Init ------------
@@ -657,6 +807,13 @@ function initApp() {
   });
 
   attachEventListeners();
+
+  // Apply user settings from localStorage
+  try {
+    loadSettingsIntoForm();
+  } catch (e) {
+    console.warn('Failed to load settings into form', e);
+  }
 
   // Initial route
   router().catch((err) => console.error("Initial router error", err));
