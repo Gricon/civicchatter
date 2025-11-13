@@ -1041,23 +1041,71 @@ async function showDebatePageFromHash(handleOrMe) {
       .eq("handle", handle.toLowerCase())
       .maybeSingle();
 
-    if (error || !deb) {
-      byId("deb-title").textContent = "Debate page not found";
-      byId("deb-desc").textContent = "";
-      byId("deb-content").innerHTML = "";
-      return;
-    }
+      if (error || !deb) return showDebatePageNotFound();
 
     byId("deb-title").textContent = deb.title || `@${deb.handle} · Debates`;
     byId("deb-desc").textContent =
       deb.description || "Debate topics and positions.";
-    byId("deb-content").innerHTML =
-      '<p class="hint">Debate threads coming soon.</p>';
+    // Render a live room card that opens a Jitsi Meet room using the debate handle
+    const roomName = `civicchatter-${(deb.handle || deb.title || 'room').replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    byId("deb-content").innerHTML = `
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+        <div>
+          <div style="font-weight:600">${escapeHtml(deb.title || `@${deb.handle} · Debates`)}</div>
+          <div class="hint">${escapeHtml(deb.description || 'Live debate room — click Join to enter')}</div>
+        </div>
+        <div>
+          <button class="button--primary" data-room="${escapeHtml(roomName)}" id="deb-join-btn">Join Live Debate</button>
+        </div>
+      </div>
+    `;
+
+    // Bind join button
+    byId('deb-join-btn')?.addEventListener('click', (e) => {
+      const room = e.currentTarget?.getAttribute('data-room');
+      if (room) openDebateRoom(room, deb.title || deb.handle);
+    });
   } catch (err) {
     alertActionError("debate page", err);
   }
 }
 
+  function showDebatePageNotFound() {
+    byId("deb-title").textContent = "Debate page not found";
+    byId("deb-desc").textContent = "";
+    byId("deb-content").innerHTML = "";
+  }
+
+  function openDebateRoom(roomName, title) {
+    try {
+      const modal = byId('debate-modal');
+      const body = byId('debate-modal-body');
+      if (!modal || !body) return;
+      // Clear old iframe
+      body.innerHTML = '';
+      // Build Jitsi Meet iframe URL (public meet.jit.si)
+      const url = `https://meet.jit.si/${encodeURIComponent(roomName)}`;
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.frameBorder = '0';
+      body.appendChild(iframe);
+      modal.classList.remove('hidden');
+      // close handler
+      byId('debate-modal-close')?.addEventListener('click', closeDebateRoom);
+    } catch (e) {
+      console.error('openDebateRoom error', e);
+      alert('Failed to open live debate room');
+    }
+  }
+
+  function closeDebateRoom() {
+    const modal = byId('debate-modal');
+    const body = byId('debate-modal-body');
+    if (modal) modal.classList.add('hidden');
+    if (body) body.innerHTML = '';
+  }
 // ------------ Router ------------
 
 async function router() {
