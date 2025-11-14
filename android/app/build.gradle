@@ -27,7 +27,25 @@ android {
             v1SigningEnabled true   // older Android needs v1
             v2SigningEnabled true
         }
-        // add release signingConfig later if needed
+        // release signing config: reads values from Gradle project properties (e.g. in gradle.properties)
+        // or from environment variables. Do NOT commit your keystore or passwords to source control.
+        release {
+            def ksPath = null
+            if (project.hasProperty('RELEASE_STORE_FILE')) {
+                ksPath = RELEASE_STORE_FILE
+            } else if (System.getenv('RELEASE_STORE_FILE')) {
+                ksPath = System.getenv('RELEASE_STORE_FILE')
+            } else {
+                ksPath = 'release.keystore' // fallback to a keystore placed at android/app/release.keystore
+            }
+
+            storeFile file(ksPath)
+            storePassword project.hasProperty('RELEASE_STORE_PASSWORD') ? RELEASE_STORE_PASSWORD : System.getenv('RELEASE_STORE_PASSWORD')
+            keyAlias project.hasProperty('RELEASE_KEY_ALIAS') ? RELEASE_KEY_ALIAS : System.getenv('RELEASE_KEY_ALIAS')
+            keyPassword project.hasProperty('RELEASE_KEY_PASSWORD') ? RELEASE_KEY_PASSWORD : System.getenv('RELEASE_KEY_PASSWORD')
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
     }
 
     buildTypes {
@@ -35,7 +53,8 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            // signingConfig signingConfigs.release
+            // If your signing properties are configured (RELEASE_*), uncomment the next line to use the release signing config
+            signingConfig signingConfigs.release
         }
         debug {
             debuggable true

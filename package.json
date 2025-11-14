@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "create-bucket": "node scripts/create_bucket.mjs"
+    "create-bucket": "node scripts/create_bucket.mjs",
+    "build-android": "bash scripts/build-android.sh debug",
+    "build-android-release": "bash scripts/build-android.sh release"
   },
   "keywords": [],
   "author": "",
