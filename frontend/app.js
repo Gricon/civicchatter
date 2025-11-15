@@ -2,7 +2,17 @@
    Civic Chatter — app.js
    =========================== */
 
-// ------------ Supabase init ------------
+// KILL ALL SERVICE WORKERS IMMEDIATELY
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => {
+      console.log('Unregistering service worker:', reg.scope);
+      reg.unregister();
+    });
+  });
+}
+
+
 const SUPABASE_URL = "https://uoehxenaabrmuqzhxjdi.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvZWh4ZW5hYWJybXVxemh4amRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDgwOTAsImV4cCI6MjA3NzgyNDA5MH0._-2yNMgwTjfZ_yBupor_DMrOmYx_vqiS_aWYICA0GjU";
