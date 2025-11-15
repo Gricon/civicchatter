@@ -1,56 +1,30 @@
-const CACHE = "cc-v1";
-const PRECACHE_URLS = [
-	"/index.html",
-	"/styles.css",
-	"/app.js",
-	"/manifest.webmanifest",
-];
+// Service worker that unregisters itself
+// This clears all caches and prevents future caching issues
 
-// Install: cache essential assets and activate immediately
-self.addEventListener("install", (e) => {
-	self.skipWaiting();
-	e.waitUntil(
-		caches.open(CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
-	);
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// Activate: take control of clients and clean up old caches
-self.addEventListener("activate", (e) => {
-	clients.claim();
-	e.waitUntil(
-		caches.keys().then((keys) =>
-			Promise.all(
-				keys
-					.filter((k) => k !== CACHE)
-					.map((k) => caches.delete(k))
-			)
-		)
-	);
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      // Delete all caches
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+      
+      // Unregister this service worker
+      const registrations = await self.registration.unregister();
+      console.log('Service worker unregistered and caches cleared');
+      
+      // Take control of all pages
+      await clients.claim();
+    })()
+  );
 });
 
-// Fetch handler: network-first for critical app assets, cache-first for others
-self.addEventListener("fetch", (e) => {
-	const req = e.request;
-	const url = new URL(req.url);
-
-	// Only handle same-origin requests
-	if (url.origin !== location.origin) return;
-
-	// Network-first for core app files so users get updates after sign-in
-	if (PRECACHE_URLS.includes(url.pathname) || url.pathname.endsWith("/")) {
-		e.respondWith(
-			fetch(req)
-				.then((res) => {
-					// Update cache in background
-					const copy = res.clone();
-					caches.open(CACHE).then((cache) => cache.put(req, copy));
-					return res;
-				})
-				.catch(() => caches.match(req))
-		);
-		return;
-	}
-
-	// For other requests, try cache first then network
-	e.respondWith(caches.match(req).then((res) => res || fetch(req)));
+// Don't intercept any fetch requests
+self.addEventListener('fetch', () => {
+  // Do nothing - let requests go through normally
 });
