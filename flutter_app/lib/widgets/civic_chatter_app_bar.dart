@@ -70,34 +70,46 @@ class CivicChatterAppBar extends StatelessWidget
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton.icon(
-                          icon: const Icon(Icons.home,
-                              size: 18, color: Colors.white),
-                          label: const Text('Home',
-                              style: TextStyle(color: Colors.white)),
+                          icon: Icon(Icons.home,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onSurface),
+                          label: Text('Home',
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface)),
                           onPressed: () => context.go('/home'),
                         ),
                         const SizedBox(width: 4),
                         TextButton.icon(
-                          icon: const Icon(Icons.gavel,
-                              size: 18, color: Colors.white),
-                          label: const Text('Debates',
-                              style: TextStyle(color: Colors.white)),
+                          icon: Icon(Icons.gavel,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onSurface),
+                          label: Text('Debates',
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface)),
                           onPressed: () => context.go('/debates'),
                         ),
                         const SizedBox(width: 4),
                         TextButton.icon(
-                          icon: const Icon(Icons.person,
-                              size: 18, color: Colors.white),
-                          label: const Text('My Profile',
-                              style: TextStyle(color: Colors.white)),
+                          icon: Icon(Icons.person,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onSurface),
+                          label: Text('My Profile',
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface)),
                           onPressed: () => context.go('/profile'),
                         ),
                         const SizedBox(width: 4),
                         TextButton.icon(
-                          icon: const Icon(Icons.settings,
-                              size: 18, color: Colors.white),
-                          label: const Text('Settings',
-                              style: TextStyle(color: Colors.white)),
+                          icon: Icon(Icons.settings,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onSurface),
+                          label: Text('Settings',
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface)),
                           onPressed: () => context.go('/settings'),
                         ),
                       ],
