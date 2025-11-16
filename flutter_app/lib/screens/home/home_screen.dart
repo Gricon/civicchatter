@@ -123,106 +123,108 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             // Create Post Box
             Card(
-              elevation: 3,
+              elevation: 2,
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Create Post',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Post Type Dropdown
-                    DropdownButtonFormField<String>(
-                      value: _selectedPostType,
-                      decoration: InputDecoration(
-                        labelText: 'Post Type',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(_getPostTypeIcon(_selectedPostType)),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Text Post',
-                          child: Text('Text Post'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Video',
-                          child: Text('Video'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Livestream',
-                          child: Text('Livestream'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Photo',
-                          child: Text('Photo'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'File',
-                          child: Text('File'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Document',
-                          child: Text('Document'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedPostType = value!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
                     // Content Input
                     TextField(
                       controller: _contentController,
-                      maxLines: 5,
+                      maxLines: 4,
                       decoration: InputDecoration(
-                        labelText: 'What\'s on your mind?',
-                        hintText: 'Share your thoughts...',
+                        hintText: 'What\'s on your mind?',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        alignLabelWithHint: true,
+                        contentPadding: const EdgeInsets.all(16),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Submit Button
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (_contentController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter some content'),
-                              backgroundColor: Colors.orange,
+                    const SizedBox(height: 12),
+                    // Dropdown and Submit Button Row
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedPostType,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
+                              prefixIcon: Icon(
+                                _getPostTypeIcon(_selectedPostType),
+                                size: 20,
+                              ),
                             ),
-                          );
-                          return;
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Posting $_selectedPostType as ${_showPrivatePosts ? "Private" : "Public"}...',
-                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Text Post',
+                                child: Text('Text Post'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Video',
+                                child: Text('Video'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Livestream',
+                                child: Text('Livestream'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Photo',
+                                child: Text('Photo'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'File',
+                                child: Text('File'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Document',
+                                child: Text('Document'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedPostType = value!;
+                              });
+                            },
                           ),
-                        );
-                        _contentController.clear();
-                      },
-                      icon: const Icon(Icons.send),
-                      label: const Text('Submit Post'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (_contentController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter some content'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                return;
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Posting $_selectedPostType as ${_showPrivatePosts ? "Private" : "Public"}...',
+                                  ),
+                                ),
+                              );
+                              _contentController.clear();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: const Text('Submit'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
