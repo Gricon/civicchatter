@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/civic_chatter_app_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,8 +20,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
+      appBar: CivicChatterAppBar(
+        title: 'Settings',
+        showBackButton: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

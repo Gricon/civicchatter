@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/civic_chatter_app_bar.dart';
 
 class PrivateProfileScreen extends StatefulWidget {
   const PrivateProfileScreen({super.key});
@@ -48,13 +49,9 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-          tooltip: 'Back',
-        ),
+      appBar: CivicChatterAppBar(
+        title: 'My Profile',
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/civic_chatter_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,27 +12,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-
-    switch (index) {
-      case 0:
-        // Home - stay here
-        break;
-      case 1:
-        context.go('/profile');
-        break;
-      case 2:
-        context.go('/debates');
-        break;
-      case 3:
-        context.go('/settings');
-        break;
-    }
-  }
-
   Future<void> _handleLogout() async {
     try {
       await context.read<AuthProvider>().signOut();
@@ -56,8 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Civic Chatter'),
+      appBar: CivicChatterAppBar(
+        title: 'Home',
+        showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -144,30 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF002868),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.forum),
-            label: 'Debates',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }
