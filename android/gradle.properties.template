@@ -1,0 +1,16 @@
+## Template for android/gradle.properties
+## Copy this to android/gradle.properties and fill values (DO NOT commit real values)
+
+# Path to keystore file. Use absolute path or place release.keystore in android/app/
+# Example: /home/you/.keys/release.keystore  OR android/app/release.keystore
+RELEASE_STORE_FILE=/absolute/path/to/release.keystore
+
+# Keystore password and key alias/password
+RELEASE_STORE_PASSWORD=your_store_password
+RELEASE_KEY_ALIAS=your_key_alias
+RELEASE_KEY_PASSWORD=your_key_password
+
+# Optional: enable release signing by default (set to true when properties are present)
+#RELEASE_SIGNING_ENABLED=true
+
+# Do not commit your keystore or real passwords to version control.
