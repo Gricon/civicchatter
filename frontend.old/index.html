@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Civic Chatter</title>
+  <meta name="description" content="Civic Chatter — coordinate debates, manage civic profiles" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  
+  <!-- Supabase SDK - NO DEFER -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- OpenCV (for client-side cartoonize) -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header>
+    <h1>Civic Chatter</h1>
+    <nav id="nav" class="hidden">
+      <a href="#/profile" id="nav-private-profile" class="nav-link">My Profile</a>
+      <a href="#/u/" id="nav-public-profile" class="nav-link">My Public Profile</a>
+      <a href="#/d/me" id="nav-debates" class="nav-link">Debates</a>
+      <a href="#/settings" id="nav-settings" class="nav-link">Settings</a>
+      <a href="#" id="logout-link" class="logout-btn">Logout</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="container">
+
+    <!-- LOGIN SECTION -->
+    <section id="login-section" class="card">
+      <h2>Sign in</h2>
+      <p class="hint">Use your <b>handle</b> or <b>email</b> and password.</p>
+
+      <label>Username or Email
+        <input id="login-username" type="text" autocomplete="username" placeholder="yourhandle or you@example.com" />
+      </label>
+
+      <label>Password
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </label>
+
+      <div class="row">
+        <button id="btn-login" type="button" class="button--primary">Sign In</button>
+        <button id="go-signup" type="button" class="button--ghost">Create account</button>
+      </div>
+    </section>
+
+    <!-- SIGNUP SECTION -->
+    <section id="signup-section" class="card hidden">
+      <h2>Create account</h2>
+
+      <div class="grid">
+        <label>Name
+          <input id="signup-name" type="text" placeholder="Your name" />
+        </label>
+
+        <label>Handle (public @username)
+          <input id="signup-handle" type="text" placeholder="e.g. conrad" />
+          <small class="hint">3+ chars: a–z, 0–9, _ or -</small>
+        </label>
+
+        <label>Email
+          <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
+
+        <label>Phone (optional)
+          <input id="signup-phone" type="tel" placeholder="+63..." />
+        </label>
+
+        <label>Password
+          <input id="signup-password" type="password" autocomplete="new-password" placeholder="Create a password" minlength="6" />
+          <small class="hint">Minimum 6 characters</small>
+        </label>
+
+        <label>Address (optional)
+          <input id="signup-address" type="text" placeholder="Address" />
+        </label>
+      </div>
+
+      <label class="row mt-1">
+        <input id="signup-private" type="checkbox" />
+        <span>Private account (not searchable)</span>
+      </label>
+
+      <div class="row">
+        <button id="btn-signup" type="button" class="button--primary">Create Account</button>
+        <button id="go-login" type="button" class="button--ghost">Back to login</button>
+      </div>
+    </section>
+
+    <!-- PRIVATE PROFILE (Edit Mode) -->
+    <section id="private-profile" class="card hidden">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h2 class="mt-0">My Profile</h2>
+        <div>
+          <button id="go-to-public-profile" class="button--ghost">View public profile</button>
+        </div>
+      </div>
+      
+
+      <!-- POSTS composer -->
+      <div class="card mt-2">
+        <h3>Create a post</h3>
+        <label>Write something
+          <textarea id="post-text" rows="3" placeholder="Share an update..."></textarea>
+        </label>
+        <label>Link (optional)
+          <input id="post-link" type="url" placeholder="https://..." />
+        </label>
+        <label>Attach file (optional)
+          <input id="post-file" type="file" accept="*/*" />
+        </label>
+        <div class="row mt-1">
+          <button id="post-create" class="button--primary">Post</button>
+          <span id="post-status" class="hint" style="margin-left:1rem"></span>
+        </div>
+      </div>
+
+      <!-- Posts feed -->
+      <div id="posts-feed" class="mt-2">
+        <h3>Your posts</h3>
+        <div id="posts-list"></div>
+      </div>
+
+      <div class="mt-2">
+        <a id="public-link" href="#/u/" class="button--ghost" style="display: inline-block; margin-top: 1rem;">View My Public Profile</a>
+      </div>
+    </section>
+
+    <!-- PUBLIC PROFILE (View) -->
+    <section id="public-profile" class="card hidden">
+      <h2>Public Profile</h2>
+
+      <div class="public-header">
+        <img id="pub-avatar" alt="avatar" class="avatar" src="https://via.placeholder.com/80" loading="lazy" />
+        <div>
+          <h3 id="pub-display-name" class="mt-0 mb-0">Loading...</h3>
+          <p class="handle" id="pub-handle">@loading</p>
+          <p class="city" id="pub-city"></p>
+        </div>
+      </div>
+
+      <p id="pub-bio">Loading bio...</p>
+
+      <div class="mt-2">
+        <a href="#/profile" class="button--ghost">Back to My Profile</a>
+      </div>
+    </section>
+
+    <!-- DEBATES PAGE -->
+    <section id="debate-page" class="card hidden">
+      <h2 id="deb-title">Debates</h2>
+      <p id="deb-desc" class="hint"></p>
+      <div id="deb-content" class="mt-2"></div>
+
+      <div class="mt-2">
+        <a href="#/profile" class="button--ghost">Back to My Profile</a>
+      </div>
+    </section>
+
+    <!-- Debate live modal (Jitsi API will be injected here) -->
+    <div id="debate-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:2000;">
+      <div style="width:100%;max-width:1100px;background:var(--surface);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);">
+        <div id="debate-modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);">
+          <div style="display:flex;gap:1rem;align-items:center;">
+            <div id="debate-modal-title" style="font-weight:600;">Live Debate</div>
+            <div id="debate-modal-count" class="hint" style="font-size:.9rem;">0 participants</div>
+          </div>
+          <div>
+            <button id="debate-mute-toggle" class="button--ghost">Mute</button>
+            <button id="debate-modal-close" class="button--ghost">Close</button>
+          </div>
+        </div>
+        <div id="debate-modal-body" style="width:100%;height:70vh;background:#000;">
+          <!-- Jitsi API parent node appended here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <section id="settings-page" class="card hidden">
+      <h2>Site Settings</h2>
+      <p class="hint">Customize the site appearance. Changes are saved in your browser.</p>
+
+      <!-- Profile summary at top of settings with an inline edit option -->
+      <div id="settings-profile" class="card mt-1" style="display:flex; align-items:center; gap:1rem;">
+        <img id="sp-avatar" src="https://via.placeholder.com/64" alt="avatar" class="avatar" style="width:64px;height:64px;" />
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <div>
+              <h3 id="sp-display-name" class="mt-0 mb-0">Loading...</h3>
+              <div class="handle" id="sp-handle">@loading</div>
+              <div class="hint" id="sp-email">(no email)</div>
+            </div>
+            <div style="margin-left:auto;">
+              <button id="settings-edit-profile" class="button--ghost">Edit</button>
+            </div>
+          </div>
+
+          <!-- Inline edit form (hidden by default) -->
+          <form id="settings-profile-edit" class="hidden mt-1">
+            <div class="grid">
+              <label>Handle
+                <input id="sp-handle-input" type="text" />
+              </label>
+              <label>Display Name
+                <input id="sp-display-name-input" type="text" />
+              </label>
+              <label>Avatar URL
+                <input id="sp-avatar-input" type="url" />
+              </label>
+              <label>Upload avatar image
+                <input id="sp-avatar-file" type="file" accept="image/*" />
+                <div class="help">Choose an image, then click Cartoonize to preview and upload.</div>
+                <div class="row mt-1">
+                  <button id="sp-cartoonize" type="button" class="button--ghost">Cartoonize & Upload</button>
+                  <span id="sp-cartoon-status" class="hint" style="margin-left:1rem"></span>
+                </div>
+                <div style="margin-top:.5rem;">
+                  <img id="sp-avatar-preview" src="" alt="preview" style="max-width:160px; display:none; border-radius:4px;"/>
+                  <div id="sp-cartoon-progress" class="hidden" style="margin-top:.5rem;">
+                    <div style="width:100%; background:#eee; height:10px; border-radius:6px; overflow:hidden;">
+                      <div id="sp-cartoon-progress-bar" style="width:0%; height:100%; background:#4caf50; transition:width 200ms ease;"></div>
+                    </div>
+                    <div id="sp-cartoon-progress-text" class="hint" style="margin-top:.25rem;"></div>
+                  </div>
+                  <div class="mt-1">
+                    <button id="sp-check-bucket" type="button" class="button--ghost">Check avatars bucket</button>
+                    <span id="sp-bucket-status" class="hint" style="margin-left:.5rem"></span>
+                  </div>
+                </div>
+              </label>
+              <label>Email
+                <input id="sp-email-input" type="email" />
+              </label>
+              <label>Phone
+                <input id="sp-phone-input" type="tel" />
+              </label>
+            </div>
+            <div class="row mt-1">
+              <button id="settings-save-profile" type="button" class="button--primary">Save profile</button>
+              <button id="settings-cancel-profile" type="button" class="button--ghost">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="grid">
+        <label>Base font size (px)
+          <input id="settings-font-size" type="range" min="12" max="24" value="16" />
+          <div class="help"><span id="settings-font-size-val">16</span>px</div>
+        </label>
+
+        <label>Writing orientation
+          <select id="settings-writing-mode">
+            <option value="horizontal-tb">Horizontal (normal)</option>
+            <option value="vertical-rl">Vertical (right-to-left)</option>
+          </select>
+        </label>
+
+        <label>
+          <input id="settings-font-italic" type="checkbox" /> Use italic font style
+        </label>
+
+        <label>Background type
+          <div class="row">
+            <label class="row"><input type="radio" name="bgtype" value="color" id="bgtype-color" checked /> Color</label>
+            <label class="row"><input type="radio" name="bgtype" value="image" id="bgtype-image" /> Image URL</label>
+          </div>
+        </label>
+
+        <label id="bg-color-label">Background color
+          <input id="settings-bg-color" type="color" value="#f5f5f5" />
+        </label>
+
+        <label id="bg-image-label" class="hidden">Background image URL
+          <input id="settings-bg-image" type="url" placeholder="https://..." />
+        </label>
+
+        <div>
+          <div class="help">Preview</div>
+          <div id="settings-preview" class="card mt-1" style="padding:1rem;">The quick brown fox jumps over the lazy dog.</div>
+        </div>
+      </div>
+
+      <div class="row mt-2">
+        <button id="settings-save" class="button--primary">Save Settings</button>
+        <button id="settings-reset" class="button--ghost">Reset</button>
+      </div>
+
+      <!-- Security controls -->
+      <hr />
+      <h3>Security</h3>
+      <p class="hint">Change your password or sign out of this session.</p>
+      <div class="grid">
+        <label>New password
+          <input id="security-new-password" type="password" placeholder="New password (min 6)" />
+        </label>
+        <label>Confirm new password
+          <input id="security-confirm-password" type="password" placeholder="Confirm new password" />
+        </label>
+        <div class="row">
+          <button id="security-change-password" class="button--primary">Change password</button>
+          <button id="security-signout" class="button--ghost">Sign out</button>
+        </div>
+      </div>
+      
+      <!-- Danger zone -->
+      <hr />
+      <h3 style="color:#b00020">Danger zone</h3>
+      <p class="hint">Irreversible actions. Back up your data before removing it.</p>
+      <div class="grid">
+        <div>
+          <div class="help">Backup / export</div>
+          <p class="hint">Download a JSON archive of your public/private profile and debate page.</p>
+          <div class="row">
+            <button id="danger-export" class="button--ghost">Export my data (JSON)</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="help">Delete data</div>
+          <p class="hint">Remove your profile and debate page from the database. This does NOT remove your Auth account.</p>
+          <div class="row">
+            <button id="danger-delete-data" class="button--danger">Delete my data</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="help">Delete account</div>
+          <p class="hint">Request account deletion. This attempts to remove your data and sign you out. Deleting the actual Auth user record requires admin/service credentials.</p>
+          <div class="row">
+            <button id="danger-delete-account" class="button--danger">Delete my account</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- App logic - WITH defer -->
+  <script src="app.js" defer></script>
+</body>
+</html>
