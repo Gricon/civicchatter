@@ -74,13 +74,17 @@ jobs:
             android/app/build/outputs/bundle/release/app-release.aab
 
       - name: Sign APK if keystore secret provided
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No keystore configured, skipping APK signing"
+            exit 0
+          fi
+          
           mkdir -p android/app
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
           BUILD_TOOLS=$RUNNER_TEMP/android-sdk/build-tools/34.0.0
@@ -93,7 +97,7 @@ jobs:
           echo "Signed APK: $APK_SIGNED"
 
       - name: Upload signed APK artifact
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: hashFiles('android/app/build/outputs/apk/release/app-release-signed.apk') != ''
         uses: actions/upload-artifact@v4
         with:
           name: signed-apk
