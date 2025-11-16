@@ -10,9 +10,6 @@ jobs:
     name: Build Android APK/AAB
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,16 +24,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT
-          # download recent command line tools
+          export ANDROID_SDK_ROOT="$RUNNER_TEMP/android-sdk"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          cd "$ANDROID_SDK_ROOT"
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
-          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/ || true
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools"/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/" || true
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,7 +45,6 @@ jobs:
 
       - name: Build web assets and sync Capacitor
         run: |
-          # If mobile package exists and has a build script, use it
           if [ -f mobile/package.json ] && grep -q '"build"' mobile/package.json; then
             cd mobile
             npm ci
@@ -56,7 +52,6 @@ jobs:
             cd ..
             npx cap sync android
           else
-            # copy static frontend into Android assets
             mkdir -p android/app/src/main/assets/public
             cp -r frontend/* android/app/src/main/assets/public/ || true
             npx cap sync android || true
@@ -64,6 +59,8 @@ jobs:
 
       - name: Build Android (assembleRelease & bundleRelease)
         working-directory: android
+        env:
+          ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease bundleRelease --no-daemon
@@ -79,112 +76,25 @@ jobs:
       - name: Sign APK if keystore secret provided
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          name: Android build
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          mkdir -p android/app
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          BUILD_TOOLS=$RUNNER_TEMP/android-sdk/build-tools/34.0.0
+          APK_UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          APK_ALIGNED=android/app/build/outputs/apk/release/app-release-unsigned-aligned.apk
+          APK_SIGNED=android/app/build/outputs/apk/release/app-release-signed.apk
+          $BUILD_TOOLS/zipalign -v -p 4 "$APK_UNSIGNED" "$APK_ALIGNED"
+          $BUILD_TOOLS/apksigner sign --ks android/app/release.keystore --ks-pass pass:$KEYSTORE_PASSWORD --ks-key-alias $KEY_ALIAS --key-pass pass:$KEY_PASSWORD --out "$APK_SIGNED" "$APK_ALIGNED"
+          $BUILD_TOOLS/apksigner verify --verbose "$APK_SIGNED"
+          echo "Signed APK: $APK_SIGNED"
 
-          on:
-            push:
-              branches: [ main ]
-            workflow_dispatch: {}
-
-          jobs:
-            build:
-              name: Build Android APK/AAB
-              runs-on: ubuntu-latest
-
-              # We avoid using the runner context directly here because it can cause
-              # parsing issues in some validator environments; instead we rely on the
-              # runtime-provided $RUNNER_TEMP environment variable inside steps.
-
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v4
-
-                - name: Setup Java (Temurin 11)
-                  uses: actions/setup-java@v4
-                  with:
-                    distribution: 'temurin'
-                    java-version: '11'
-
-                - name: Install Android SDK command-line tools
-                  run: |
-                    sudo apt-get update
-                    sudo apt-get install -y wget unzip
-                    # Use the runner-provided temp dir at runtime
-                    export ANDROID_SDK_ROOT="$RUNNER_TEMP/android-sdk"
-                    mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-                    cd "$ANDROID_SDK_ROOT"
-                    # download recent command line tools
-                    wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-                    unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-                    mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-                    mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools"/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/" || true
-                    export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-                    yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
-                    "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-                - name: Setup Node.js
-                  uses: actions/setup-node@v4
-                  with:
-                    node-version: '18'
-
-                - name: Install project deps
-                  run: npm ci
-
-                - name: Build web assets and sync Capacitor
-                  run: |
-                    # If mobile package exists and has a build script, use it
-                    if [ -f mobile/package.json ] && grep -q '"build"' mobile/package.json; then
-                      cd mobile
-                      npm ci
-                      npm run build
-                      cd ..
-                      npx cap sync android
-                    else
-                      # copy static frontend into Android assets
-                      mkdir -p android/app/src/main/assets/public
-                      cp -r frontend/* android/app/src/main/assets/public/ || true
-                      npx cap sync android || true
-                    fi
-
-                - name: Build Android (assembleRelease & bundleRelease)
-                  working-directory: android
-                  env:
-                    # Use the runner temp dir assigned at job runtime
-                    ANDROID_SDK_ROOT: ${{ env.RUNNER_TEMP }}/android-sdk
-                  run: |
-                    chmod +x gradlew
-                    ./gradlew assembleRelease bundleRelease --no-daemon
-
-                - name: Upload unsigned APK and AAB artifacts
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: unsigned-artifacts
-                    path: |
-                      android/app/build/outputs/apk/release/app-release-unsigned.apk
-                      android/app/build/outputs/bundle/release/app-release.aab
-
-                - name: Sign APK if keystore secret provided
-                  if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-                  env:
-                    KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-                    KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-                    KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-                  run: |
-                    mkdir -p android/app
-                    echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-                    BUILD_TOOLS=$RUNNER_TEMP/android-sdk/build-tools/34.0.0
-                    APK_UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
-                    APK_ALIGNED=android/app/build/outputs/apk/release/app-release-unsigned-aligned.apk
-                    APK_SIGNED=android/app/build/outputs/apk/release/app-release-signed.apk
-                    $BUILD_TOOLS/zipalign -v -p 4 "$APK_UNSIGNED" "$APK_ALIGNED"
-                    $BUILD_TOOLS/apksigner sign --ks android/app/release.keystore --ks-pass pass:$KEYSTORE_PASSWORD --ks-key-alias $KEY_ALIAS --key-pass pass:$KEY_PASSWORD --out "$APK_SIGNED" "$APK_ALIGNED"
-                    $BUILD_TOOLS/apksigner verify --verbose "$APK_SIGNED"
-                    echo "Signed APK: $APK_SIGNED"
-
-                - name: Upload signed APK artifact
-                  if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: signed-apk
-                    path: android/app/build/outputs/apk/release/app-release-signed.apk
+      - name: Upload signed APK artifact
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-apk
+          path: android/app/build/outputs/apk/release/app-release-signed.apk
