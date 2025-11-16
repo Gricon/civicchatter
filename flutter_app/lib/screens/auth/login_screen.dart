@@ -41,10 +41,37 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Login failed';
+
+        // Parse error messages for better user feedback
+        final errorString = e.toString().toLowerCase();
+        if (errorString.contains('handle not found')) {
+          errorMessage =
+              'Username not found. Please check your username or use email.';
+        } else if (errorString.contains('invalid login credentials')) {
+          errorMessage = 'Invalid username or password. Please try again.';
+        } else if (errorString.contains('email not confirmed')) {
+          errorMessage = 'Please verify your email address before logging in.';
+        } else if (errorString.contains('network') ||
+            errorString.contains('connection')) {
+          errorMessage =
+              'Network error. Please check your internet connection.';
+        } else if (errorString.contains('timeout')) {
+          errorMessage = 'Connection timeout. Please try again.';
+        } else {
+          errorMessage = 'Login failed: ${e.toString()}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
           ),
         );
       }
@@ -127,6 +154,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     text: 'Create Account',
                     onPressed: () => context.go('/signup'),
                     variant: ButtonVariant.outlined,
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => context.go('/debug'),
+                    child: Text(
+                      'Connection Issues? Run Debug Test',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),

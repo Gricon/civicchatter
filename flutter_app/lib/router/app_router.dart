@@ -9,6 +9,7 @@ import '../screens/debates/debates_screen.dart';
 import '../screens/debates/debate_detail_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/edit_profile_screen.dart';
+import '../screens/debug/debug_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -83,6 +84,11 @@ class AppRouter {
         path: '/settings/edit-profile',
         name: 'edit-profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/debug',
+        name: 'debug',
+        builder: (context, state) => const DebugScreen(),
       ),
     ],
   );
