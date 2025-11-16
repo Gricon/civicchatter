@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -28,7 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isSaving = false;
   bool _isPrivate = false;
   String? _avatarUrl;
-  File? _selectedImage;
+  XFile? _selectedImage;
 
   @override
   void initState() {
@@ -93,7 +92,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImage = pickedFile;
       });
     }
   }
@@ -188,18 +187,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey[300],
-                      backgroundImage: _selectedImage != null
-                          ? FileImage(_selectedImage!) as ImageProvider
-                          : _avatarUrl != null
-                              ? NetworkImage(_avatarUrl!) as ImageProvider
-                              : null,
-                      child: _selectedImage == null && _avatarUrl == null
-                          ? const Icon(Icons.person, size: 60)
-                          : null,
-                    ),
+                    _selectedImage != null
+                        ? FutureBuilder(
+                            future: _selectedImage!.readAsBytes(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return CircleAvatar(
+                                  radius: 60,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: MemoryImage(snapshot.data!),
+                                );
+                              }
+                              return CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.grey[300],
+                                child: const CircularProgressIndicator(),
+                              );
+                            },
+                          )
+                        : CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: _avatarUrl != null
+                                ? NetworkImage(_avatarUrl!) as ImageProvider
+                                : null,
+                            child: _avatarUrl == null
+                                ? const Icon(Icons.person, size: 60)
+                                : null,
+                          ),
                     Positioned(
                       bottom: 0,
                       right: 0,

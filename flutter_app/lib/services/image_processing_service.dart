@@ -1,12 +1,12 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 class ImageProcessingService {
   /// Cartoonizes an image by applying smoothing, posterization, and edge detection
-  static Future<File> cartoonizeImage(File imageFile) async {
-    // Read the image file
-    final bytes = await imageFile.readAsBytes();
-    img.Image? image = img.decodeImage(bytes);
+  /// Takes image bytes and returns processed bytes
+  static Future<Uint8List> cartoonizeImage(Uint8List imageBytes) async {
+    // Decode the image
+    img.Image? image = img.decodeImage(imageBytes);
 
     if (image == null) {
       throw Exception('Failed to decode image');
@@ -33,15 +33,7 @@ class ImageProcessingService {
     image = _compositeEdges(image, edges);
 
     // Encode back to PNG
-    final pngBytes = img.encodePng(image);
-
-    // Write to temp file
-    final tempDir = Directory.systemTemp;
-    final tempFile = File(
-        '${tempDir.path}/cartoonized_${DateTime.now().millisecondsSinceEpoch}.png');
-    await tempFile.writeAsBytes(pngBytes);
-
-    return tempFile;
+    return Uint8List.fromList(img.encodePng(image));
   }
 
   /// Posterize the image by reducing color levels

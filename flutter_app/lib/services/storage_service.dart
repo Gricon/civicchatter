@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import 'image_processing_service.dart';
@@ -8,18 +9,19 @@ class StorageService {
 
   static Future<String> uploadAvatar({
     required String userId,
-    required File file,
+    required XFile file,
     bool cartoonize = true,
   }) async {
-    File fileToUpload = file;
+    Uint8List fileBytes = await file.readAsBytes();
 
     // Cartoonize the image if requested
     if (cartoonize) {
       try {
-        fileToUpload = await ImageProcessingService.cartoonizeImage(file);
+        fileBytes = await ImageProcessingService.cartoonizeImage(fileBytes);
       } catch (e) {
         // If cartoonization fails, use original image
         print('Cartoonization failed, using original image: $e');
+        fileBytes = await file.readAsBytes();
       }
     }
 
@@ -27,24 +29,18 @@ class StorageService {
     final fileName = '$userId.$fileExt';
     final filePath = 'avatars/$fileName';
 
-    await _supabase.storage.from(SupabaseConfig.storageBucket).upload(
+    await _supabase.storage.from(SupabaseConfig.storageBucket).uploadBinary(
           filePath,
-          fileToUpload,
-          fileOptions: const FileOptions(upsert: true),
+          fileBytes,
+          fileOptions: const FileOptions(
+            upsert: true,
+            contentType: 'image/png',
+          ),
         );
 
     final publicUrl = _supabase.storage
         .from(SupabaseConfig.storageBucket)
         .getPublicUrl(filePath);
-
-    // Clean up temp file if it was created
-    if (cartoonize && fileToUpload.path != file.path) {
-      try {
-        await fileToUpload.delete();
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    }
 
     return publicUrl;
   }
