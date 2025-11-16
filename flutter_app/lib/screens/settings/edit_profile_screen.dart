@@ -175,6 +175,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Back to Profile',
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
