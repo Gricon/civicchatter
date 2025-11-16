@@ -50,6 +50,11 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Back',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -121,8 +126,9 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
                 CircleAvatar(
                   radius: 60,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage:
-                      avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
+                  backgroundImage: avatarUrl != null
+                      ? CachedNetworkImageProvider(avatarUrl)
+                      : null,
                   child: avatarUrl == null
                       ? const Icon(Icons.person, size: 60)
                       : null,
@@ -154,7 +160,8 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
                   Chip(
                     avatar: const Icon(Icons.lock, size: 16),
                     label: const Text('Private Account'),
-                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.secondaryContainer,
                   ),
                 ],
               ],
@@ -230,7 +237,8 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Friends list coming soon!')),
+                        const SnackBar(
+                            content: Text('Friends list coming soon!')),
                       );
                     },
                   ),
