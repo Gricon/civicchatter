@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 
@@ -15,11 +16,152 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showPrivatePosts = false;
   String _selectedPostType = 'Text Post';
   final TextEditingController _contentController = TextEditingController();
+  XFile? _selectedFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
     _contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedFile = image;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Selected: ${image.name}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 10),
+      );
+      if (video != null) {
+        setState(() {
+          _selectedFile = video;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Selected: ${video.name}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting video: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handlePostTypeChange(String? value) {
+    if (value == null) return;
+
+    setState(() {
+      _selectedPostType = value;
+      _selectedFile = null; // Clear any previously selected file
+    });
+
+    // Handle specific actions based on post type
+    switch (value) {
+      case 'Photo':
+        _pickImage();
+        break;
+      case 'Video':
+        _pickVideo();
+        break;
+      case 'Livestream':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Livestream feature coming soon!'),
+            backgroundColor: Colors.purple,
+          ),
+        );
+        break;
+      case 'File':
+      case 'Document':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$value upload coming soon!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        break;
+    }
+  }
+
+  Future<void> _submitPost() async {
+    final content = _contentController.text.trim();
+
+    // Validate based on post type
+    if (_selectedPostType == 'Text Post' && content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter some content'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if ((_selectedPostType == 'Photo' || _selectedPostType == 'Video') &&
+        _selectedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a ${_selectedPostType.toLowerCase()}'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show success message
+    String message = 'Posting $_selectedPostType';
+    if (_selectedFile != null) {
+      message += ' (${_selectedFile!.name})';
+    }
+    message += ' as ${_showPrivatePosts ? "Private" : "Public"}...';
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+
+    // Clear form
+    setState(() {
+      _contentController.clear();
+      _selectedFile = null;
+    });
   }
 
   Future<void> _handleLogout() async {
@@ -142,6 +284,45 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Show selected file
+                    if (_selectedFile != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getPostTypeIcon(_selectedPostType),
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Selected: ${_selectedFile!.name}',
+                                style: const TextStyle(color: Colors.green),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedFile = null;
+                                });
+                              },
+                              tooltip: 'Remove',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_selectedFile != null) const SizedBox(height: 12),
                     // Dropdown and Submit Button Row
                     Row(
                       children: [
@@ -224,36 +405,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedPostType = value!;
-                              });
-                            },
+                            onChanged: _handlePostTypeChange,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           flex: 1,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_contentController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Please enter some content'),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
-                                return;
-                              }
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Posting $_selectedPostType as ${_showPrivatePosts ? "Private" : "Public"}...',
-                                  ),
-                                ),
-                              );
-                              _contentController.clear();
-                            },
+                            onPressed: _submitPost,
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
