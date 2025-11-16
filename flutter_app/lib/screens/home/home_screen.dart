@@ -12,6 +12,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _showPrivatePosts = false;
+
   Future<void> _handleLogout() async {
     try {
       await context.read<AuthProvider>().signOut();
@@ -53,6 +55,58 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Toggle for Private/Public Posts
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Public',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: _showPrivatePosts
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
+                                  color: _showPrivatePosts
+                                      ? Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color
+                                      : Theme.of(context).colorScheme.primary,
+                                ),
+                      ),
+                      const SizedBox(width: 16),
+                      Switch(
+                        value: _showPrivatePosts,
+                        onChanged: (value) {
+                          setState(() {
+                            _showPrivatePosts = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Private',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: _showPrivatePosts
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: _showPrivatePosts
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color,
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               const Icon(
                 Icons.forum,
                 size: 100,
@@ -60,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Welcome to Civic Chatter!',
+                _showPrivatePosts ? 'Private Posts' : 'Public Posts',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -69,8 +123,20 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               if (user != null) ...[
                 Text(
+                  _showPrivatePosts
+                      ? 'Posts visible only to your friends'
+                      : 'Posts visible to everyone',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: _showPrivatePosts 
+                            ? Colors.orange 
+                            : Colors.green,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
                   'Logged in as: ${user.email}',
-                  style: Theme.of(context).textTheme.bodyLarge,
+                  style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
