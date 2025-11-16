@@ -417,19 +417,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor:
                                   Theme.of(context).colorScheme.primary,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              foregroundColor: Colors.white,
                               elevation: 4,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Text(
+                            child: const Text(
                               'Submit',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
-                                color: Theme.of(context).colorScheme.onPrimary,
+                                color: Colors.white,
                               ),
                             ),
                           ),
