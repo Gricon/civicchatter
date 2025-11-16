@@ -162,30 +162,66 @@ class _HomeScreenState extends State<HomeScreen> {
                                 size: 20,
                               ),
                             ),
-                            items: const [
+                            items: [
                               DropdownMenuItem(
                                 value: 'Text Post',
-                                child: Text('Text Post'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.text_fields, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Text Post'),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'Video',
-                                child: Text('Video'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.video_library, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Video'),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'Livestream',
-                                child: Text('Livestream'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.videocam, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Livestream'),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'Photo',
-                                child: Text('Photo'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.photo_library, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Photo'),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'File',
-                                child: Text('File'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.insert_drive_file, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('File'),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 'Document',
-                                child: Text('Document'),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.description, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Document'),
+                                  ],
+                                ),
                               ),
                             ],
                             onChanged: (value) {
