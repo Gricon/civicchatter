@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/civic_chatter_app_bar.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String handle;
@@ -44,8 +45,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('@${widget.handle}'),
+      appBar: CivicChatterAppBar(
+        title: '@${widget.handle}',
+        showBackButton: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

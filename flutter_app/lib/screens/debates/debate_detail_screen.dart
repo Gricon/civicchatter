@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/civic_chatter_app_bar.dart';
 
 class DebateDetailScreen extends StatelessWidget {
   final String debateId;
@@ -8,8 +9,9 @@ class DebateDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Debate Details'),
+      appBar: CivicChatterAppBar(
+        title: 'Debate #$debateId',
+        showBackButton: true,
       ),
       body: Center(
         child: Padding(

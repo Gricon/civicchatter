@@ -62,35 +62,38 @@ class CivicChatterAppBar extends StatelessWidget
                   tooltip: 'Back',
                 ),
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.home, size: 18),
-                        label: const Text('Home'),
-                        onPressed: () => context.go('/home'),
-                      ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
-                        icon: const Icon(Icons.gavel, size: 18),
-                        label: const Text('Debates'),
-                        onPressed: () => context.go('/debates'),
-                      ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
-                        icon: const Icon(Icons.person, size: 18),
-                        label: const Text('My Profile'),
-                        onPressed: () => context.go('/profile'),
-                      ),
-                      const SizedBox(width: 4),
-                      TextButton.icon(
-                        icon: const Icon(Icons.settings, size: 18),
-                        label: const Text('Settings'),
-                        onPressed: () => context.go('/settings'),
-                      ),
-                    ],
+                child: Center(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton.icon(
+                          icon: const Icon(Icons.home, size: 18),
+                          label: const Text('Home'),
+                          onPressed: () => context.go('/home'),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton.icon(
+                          icon: const Icon(Icons.gavel, size: 18),
+                          label: const Text('Debates'),
+                          onPressed: () => context.go('/debates'),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton.icon(
+                          icon: const Icon(Icons.person, size: 18),
+                          label: const Text('My Profile'),
+                          onPressed: () => context.go('/profile'),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton.icon(
+                          icon: const Icon(Icons.settings, size: 18),
+                          label: const Text('Settings'),
+                          onPressed: () => context.go('/settings'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
