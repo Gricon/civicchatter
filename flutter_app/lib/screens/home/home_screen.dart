@@ -45,15 +45,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final supabase = Supabase.instance.client;
-      final response = await supabase
+
+      // Fetch posts without joining profiles
+      final postsResponse = await supabase
           .from('posts')
-          .select('*, profiles(username, display_name)')
+          .select('*')
           .order('created_at', ascending: false)
           .limit(50);
 
+      // Fetch all unique user IDs from posts
+      final userIds = <String>{};
+      for (var post in postsResponse) {
+        if (post['user_id'] != null) {
+          userIds.add(post['user_id']);
+        }
+      }
+
+      // Fetch profiles for those users
+      Map<String, dynamic> profilesMap = {};
+      if (userIds.isNotEmpty) {
+        try {
+          final profilesResponse = await supabase
+              .from('profiles_public')
+              .select('id, username, display_name')
+              .inFilter('id', userIds.toList());
+
+          for (var profile in profilesResponse) {
+            profilesMap[profile['id']] = profile;
+          }
+        } catch (e) {
+          debugPrint('Error loading profiles: $e');
+        }
+      } // Merge posts with their profiles
+      final postsWithProfiles = postsResponse.map((post) {
+        final postMap = Map<String, dynamic>.from(post);
+        postMap['profiles'] = profilesMap[post['user_id']];
+        return postMap;
+      }).toList();
+
       if (mounted) {
         setState(() {
-          _posts = List<Map<String, dynamic>>.from(response);
+          _posts = postsWithProfiles;
           _isLoadingPosts = false;
         });
       }
@@ -203,14 +235,19 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get the Supabase client
       final supabase = Supabase.instance.client;
 
+      debugPrint('Attempting to insert post for user: ${user.id}');
+      debugPrint('Content length: ${plainText.length}');
+      debugPrint('Post type: $_selectedPostType');
+
       // Insert post into database
-      await supabase.from('posts').insert({
+      final response = await supabase.from('posts').insert({
         'user_id': user.id,
         'content': plainText,
         'media_url': _selectedFile?.path,
         'media_type': _selectedPostType,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      }).select();
+
+      debugPrint('Insert response: $response');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,13 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       // Reload posts to show the new one
-      _loadPosts();
-    } catch (e) {
+      await _loadPosts();
+    } catch (e, stackTrace) {
+      debugPrint('Error posting: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error posting: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
