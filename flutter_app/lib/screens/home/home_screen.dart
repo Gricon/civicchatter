@@ -848,280 +848,282 @@ class _HomeScreenState extends State<HomeScreen> {
         body: LayoutBuilder(
           builder: (context, constraints) {
             // Responsive: constrain max width on large screens (web/tablet)
-            final isLargeScreen = constraints.maxWidth > 900;
             final showMessageCenter = constraints.maxWidth > 1000;
             final showNotifications = constraints.maxWidth > 1200;
             final maxWidth = 800.0;
-            final horizontalPadding = 24.0;
 
-            // Calculate remaining space for posts to stay centered
-            final notificationsWidth = showNotifications ? _notificationsPanelWidth + 8 : 0.0;
-            final messageWidth = showMessageCenter ? _messageCenterWidth + 8 : 0.0;
-            final availableWidth = constraints.maxWidth - notificationsWidth - messageWidth;
-            final postsPadding = (availableWidth - maxWidth).clamp(0.0, double.infinity) / 2;
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            return Stack(
               children: [
-                // Notifications panel
-                if (showNotifications) ...[
-                  SizedBox(
-                    width: _notificationsPanelWidth,
-                    child: const NotificationsPanel(),
-                  ),
-                  // Draggable divider for notifications
-                  MouseRegion(
-                    cursor: SystemMouseCursors.resizeColumn,
-                    child: GestureDetector(
-                      onHorizontalDragStart: (_) {
-                        setState(() => _isResizingNotifications = true);
-                      },
-                      onHorizontalDragUpdate: (details) {
-                        setState(() {
-                          _notificationsPanelWidth =
-                              (_notificationsPanelWidth + details.delta.dx)
-                                  .clamp(200.0, 400.0);
-                        });
-                      },
-                      onHorizontalDragEnd: (_) {
-                        setState(() => _isResizingNotifications = false);
-                      },
-                      child: Container(
-                        width: 8,
-                        color: _isResizingNotifications
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.5)
-                            : Colors.transparent,
-                        child: Center(
-                          child: Container(
-                            width: 2,
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                // Posts feed - fixed width, centered
-                Container(
-                  width: availableWidth,
-                  padding: EdgeInsets.symmetric(horizontal: postsPadding.clamp(16.0, double.infinity)),
+                // Posts feed - always centered on screen
+                Center(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
                       vertical: 16.0,
                     ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
                       child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Card(
-                              elevation: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    // Rich Text Editor Toolbar (Custom)
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Wrap(
-                                        spacing: 4,
-                                        runSpacing: 4,
-                                        children: [
-                                          _buildToolbarButton(
-                                              Icons.format_bold, 'Bold', () {
-                                            _quillController?.formatSelection(
-                                                Attribute.bold);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_italic, 'Italic',
-                                              () {
-                                            _quillController?.formatSelection(
-                                                Attribute.italic);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_underlined,
-                                              'Underline', () {
-                                            _quillController?.formatSelection(
-                                                Attribute.underline);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_strikethrough,
-                                              'Strike', () {
-                                            _quillController?.formatSelection(
-                                                Attribute.strikeThrough);
-                                          }),
-                                          const VerticalDivider(),
-                                          _buildToolbarButton(
-                                              Icons.format_align_left, 'Left',
-                                              () {
-                                            _quillController?.formatSelection(
-                                                Attribute.leftAlignment);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_align_center,
-                                              'Center', () {
-                                            _quillController?.formatSelection(
-                                                Attribute.centerAlignment);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_align_right, 'Right',
-                                              () {
-                                            _quillController?.formatSelection(
-                                                Attribute.rightAlignment);
-                                          }),
-                                          const VerticalDivider(),
-                                          _buildToolbarButton(
-                                              Icons.format_list_bulleted,
-                                              'Bullets', () {
-                                            _quillController
-                                                ?.formatSelection(Attribute.ul);
-                                          }),
-                                          _buildToolbarButton(
-                                              Icons.format_list_numbered,
-                                              'Numbers', () {
-                                            _quillController
-                                                ?.formatSelection(Attribute.ol);
-                                          }),
-                                        ],
-                                      ),
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Card(
+                            elevation: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Rich Text Editor Toolbar (Custom)
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    const SizedBox(height: 8),
-                                    // Rich Text Editor
-                                    if (_quillController != null)
-                                      Container(
-                                        height: 200,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: QuillEditor.basic(
-                                          controller: _quillController!,
-                                        ),
-                                      ),
-                                    const SizedBox(height: 12),
-                                    if (_selectedFile != null)
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border:
-                                              Border.all(color: Colors.green),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              _getPostTypeIcon(
-                                                  _selectedPostType),
-                                              color: Colors.green,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                'Selected: ${_selectedFile!.name}',
-                                                style: const TextStyle(
-                                                    color: Colors.green),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.close,
-                                                  size: 20),
-                                              onPressed: () {
-                                                setState(() {
-                                                  _selectedFile = null;
-                                                });
-                                              },
-                                              tooltip: 'Remove',
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    if (_selectedFile != null)
-                                      const SizedBox(height: 12),
-                                    // Privacy Toggle
+                                    child: Wrap(
+                                      spacing: 4,
+                                      runSpacing: 4,
+                                      children: [
+                                        _buildToolbarButton(
+                                            Icons.format_bold, 'Bold', () {
+                                          _quillController
+                                              ?.formatSelection(Attribute.bold);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_italic, 'Italic', () {
+                                          _quillController?.formatSelection(
+                                              Attribute.italic);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_underlined,
+                                            'Underline', () {
+                                          _quillController?.formatSelection(
+                                              Attribute.underline);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_strikethrough,
+                                            'Strike', () {
+                                          _quillController?.formatSelection(
+                                              Attribute.strikeThrough);
+                                        }),
+                                        const VerticalDivider(),
+                                        _buildToolbarButton(
+                                            Icons.format_align_left, 'Left',
+                                            () {
+                                          _quillController?.formatSelection(
+                                              Attribute.leftAlignment);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_align_center, 'Center',
+                                            () {
+                                          _quillController?.formatSelection(
+                                              Attribute.centerAlignment);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_align_right, 'Right',
+                                            () {
+                                          _quillController?.formatSelection(
+                                              Attribute.rightAlignment);
+                                        }),
+                                        const VerticalDivider(),
+                                        _buildToolbarButton(
+                                            Icons.format_list_bulleted,
+                                            'Bullets', () {
+                                          _quillController
+                                              ?.formatSelection(Attribute.ul);
+                                        }),
+                                        _buildToolbarButton(
+                                            Icons.format_list_numbered,
+                                            'Numbers', () {
+                                          _quillController
+                                              ?.formatSelection(Attribute.ol);
+                                        }),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Rich Text Editor
+                                  if (_quillController != null)
                                     Container(
+                                      height: 200,
                                       decoration: BoxDecoration(
                                         border: Border.all(
                                           color: Theme.of(context).dividerColor,
                                         ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
+                                      child: QuillEditor.basic(
+                                        controller: _quillController!,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 12),
+                                  if (_selectedFile != null)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.green),
                                       ),
                                       child: Row(
                                         children: [
                                           Icon(
-                                            _isPrivatePost
-                                                ? Icons.lock
-                                                : Icons.public,
+                                            _getPostTypeIcon(_selectedPostType),
+                                            color: Colors.green,
                                             size: 20,
-                                            color: _isPrivatePost
-                                                ? Colors.orange
-                                                : Colors.green,
                                           ),
-                                          const SizedBox(width: 12),
+                                          const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              _isPrivatePost
-                                                  ? 'Private Post'
-                                                  : 'Public Post',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium,
+                                              'Selected: ${_selectedFile!.name}',
+                                              style: const TextStyle(
+                                                  color: Colors.green),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          Switch(
-                                            value: _isPrivatePost,
-                                            onChanged: (value) {
+                                          IconButton(
+                                            icon: const Icon(Icons.close,
+                                                size: 20),
+                                            onPressed: () {
                                               setState(() {
-                                                _isPrivatePost = value;
+                                                _selectedFile = null;
                                               });
                                             },
-                                            activeColor: Colors.orange,
+                                            tooltip: 'Remove',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
                                           ),
                                         ],
                                       ),
                                     ),
+                                  if (_selectedFile != null)
                                     const SizedBox(height: 12),
-                                    // Responsive button layout
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final isSmallScreen =
-                                            constraints.maxWidth < 500;
+                                  // Privacy Toggle
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Theme.of(context).dividerColor,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          _isPrivatePost
+                                              ? Icons.lock
+                                              : Icons.public,
+                                          size: 20,
+                                          color: _isPrivatePost
+                                              ? Colors.orange
+                                              : Colors.green,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            _isPrivatePost
+                                                ? 'Private Post'
+                                                : 'Public Post',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium,
+                                          ),
+                                        ),
+                                        Switch(
+                                          value: _isPrivatePost,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _isPrivatePost = value;
+                                            });
+                                          },
+                                          activeColor: Colors.orange,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Responsive button layout
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final isSmallScreen =
+                                          constraints.maxWidth < 500;
 
-                                        if (isSmallScreen) {
-                                          // Stack vertically on mobile
-                                          return Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: [
-                                              DropdownButtonFormField<String>(
+                                      if (isSmallScreen) {
+                                        // Stack vertically on mobile
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            DropdownButtonFormField<String>(
+                                              value: _selectedPostType,
+                                              decoration: InputDecoration(
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 14,
+                                                ),
+                                                prefixIcon: Icon(
+                                                  _getPostTypeIcon(
+                                                      _selectedPostType),
+                                                  size: 20,
+                                                ),
+                                              ),
+                                              items: _buildDropdownItems(),
+                                              onChanged: _handlePostTypeChange,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            SizedBox(
+                                              height: 48,
+                                              child: ElevatedButton(
+                                                onPressed: _submitPost,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Theme.of(
+                                                                  context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? const Color(0xFF3B82F6)
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
+                                                  foregroundColor: Colors.white,
+                                                  elevation: 4,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  'Submit',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      } else {
+                                        // Row layout on larger screens
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 2,
+                                              child: DropdownButtonFormField<
+                                                  String>(
                                                 value: _selectedPostType,
                                                 decoration: InputDecoration(
                                                   border: OutlineInputBorder(
@@ -1145,742 +1147,714 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 onChanged:
                                                     _handlePostTypeChange,
                                               ),
-                                              const SizedBox(height: 12),
-                                              SizedBox(
-                                                height: 48,
-                                                child: ElevatedButton(
-                                                  onPressed: _submitPost,
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                    backgroundColor: Theme.of(
-                                                                    context)
-                                                                .brightness ==
-                                                            Brightness.dark
-                                                        ? const Color(
-                                                            0xFF3B82F6)
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .primary,
-                                                    foregroundColor:
-                                                        Colors.white,
-                                                    elevation: 4,
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              flex: 1,
+                                              child: ElevatedButton(
+                                                onPressed: _submitPost,
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 16),
+                                                  backgroundColor: Theme.of(
+                                                                  context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? const Color(0xFF3B82F6)
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
+                                                  foregroundColor: Colors.white,
+                                                  elevation: 4,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
-                                                  child: const Text(
-                                                    'Submit',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                      color: Colors.white,
-                                                    ),
+                                                ),
+                                                child: const Text(
+                                                  'Submit',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: Colors.white,
                                                   ),
                                                 ),
                                               ),
-                                            ],
-                                          );
-                                        } else {
-                                          // Row layout on larger screens
-                                          return Row(
-                                            children: [
-                                              Expanded(
-                                                flex: 2,
-                                                child: DropdownButtonFormField<
-                                                    String>(
-                                                  value: _selectedPostType,
-                                                  decoration: InputDecoration(
-                                                    border: OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                    contentPadding:
-                                                        const EdgeInsets
-                                                            .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 14,
-                                                    ),
-                                                    prefixIcon: Icon(
-                                                      _getPostTypeIcon(
-                                                          _selectedPostType),
-                                                      size: 20,
-                                                    ),
-                                                  ),
-                                                  items: _buildDropdownItems(),
-                                                  onChanged:
-                                                      _handlePostTypeChange,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                flex: 1,
-                                                child: ElevatedButton(
-                                                  onPressed: _submitPost,
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 16),
-                                                    backgroundColor: Theme.of(
-                                                                    context)
-                                                                .brightness ==
-                                                            Brightness.dark
-                                                        ? const Color(
-                                                            0xFF3B82F6)
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .primary,
-                                                    foregroundColor:
-                                                        Colors.white,
-                                                    elevation: 4,
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'Submit',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Filter and Sort Bar
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  // Privacy Filter Button
-                                  Expanded(
-                                    child: PopupMenuButton<String>(
-                                      initialValue: _filterBy,
-                                      onSelected: (value) {
-                                        setState(() {
-                                          _filterBy = value;
-                                        });
-                                        _loadPosts();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.visibility,
-                                                size: 18),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                '${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
                                             ),
                                           ],
-                                        ),
-                                      ),
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'all',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.public),
-                                              SizedBox(width: 8),
-                                              Text('All Posts'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'public',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.public),
-                                              SizedBox(width: 8),
-                                              Text('Public Only'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'private',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.lock),
-                                              SizedBox(width: 8),
-                                              Text('Private Only'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  // Post Type Filter Button
-                                  Expanded(
-                                    child: PopupMenuButton<String>(
-                                      initialValue: _postTypeFilter,
-                                      onSelected: (value) {
-                                        setState(() {
-                                          _postTypeFilter = value;
-                                        });
-                                        _loadPosts();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                                _getPostTypeIcon(
-                                                    _postTypeFilter),
-                                                size: 18),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                _postTypeFilter == 'all'
-                                                    ? 'Type'
-                                                    : _postTypeFilter
-                                                        .replaceAll(
-                                                            ' Post', ''),
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'all',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.all_inclusive),
-                                              SizedBox(width: 8),
-                                              Text('All Types'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Text Post',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.text_fields),
-                                              SizedBox(width: 8),
-                                              Text('Text Posts'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Photo',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.photo),
-                                              SizedBox(width: 8),
-                                              Text('Photos'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Video',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.videocam),
-                                              SizedBox(width: 8),
-                                              Text('Videos'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Link',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.link),
-                                              SizedBox(width: 8),
-                                              Text('Links'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Poll',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.poll),
-                                              SizedBox(width: 8),
-                                              Text('Polls'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  // Sort Button
-                                  Expanded(
-                                    child: PopupMenuButton<String>(
-                                      initialValue: _sortBy,
-                                      onSelected: (value) {
-                                        setState(() {
-                                          _sortBy = value;
-                                        });
-                                        _loadPosts();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color:
-                                                Theme.of(context).dividerColor,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.sort, size: 18),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                '${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'newest',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.new_releases),
-                                              SizedBox(width: 8),
-                                              Text('Newest First'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'oldest',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.history),
-                                              SizedBox(width: 8),
-                                              Text('Oldest First'),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'popular',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.trending_up),
-                                              SizedBox(width: 8),
-                                              Text('Most Popular'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                        );
+                                      }
+                                    },
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                          ),
+                          const SizedBox(height: 24),
 
-                            // Posts List
-                            if (_isLoadingPosts)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              )
-                            else if (_posts.isEmpty)
-                              Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32.0),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.feed,
-                                        size: 64,
-                                        color: Colors.grey[400],
+                          // Filter and Sort Bar
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                // Privacy Filter Button
+                                Expanded(
+                                  child: PopupMenuButton<String>(
+                                    initialValue: _filterBy,
+                                    onSelected: (value) {
+                                      setState(() {
+                                        _filterBy = value;
+                                      });
+                                      _loadPosts();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Theme.of(context).dividerColor,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'No posts yet',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Create your first post to get started!',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: Colors.grey[600],
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.visibility,
+                                              size: 18),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              '${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'all',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.public),
+                                            SizedBox(width: 8),
+                                            Text('All Posts'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'public',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.public),
+                                            SizedBox(width: 8),
+                                            Text('Public Only'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'private',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.lock),
+                                            SizedBox(width: 8),
+                                            Text('Private Only'),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              )
-                            else
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _posts.length,
-                                itemBuilder: (context, index) {
-                                  final post = _posts[index];
-                                  final profile = post['profiles'];
-                                  final displayName = profile != null
-                                      ? (profile['display_name'] ??
-                                          profile['handle'] ??
-                                          'Unknown User')
-                                      : 'Unknown User';
-                                  final createdAt =
-                                      DateTime.parse(post['created_at']);
-                                  final timestamp = _formatTimestamp(createdAt);
-                                  final isPrivate = post['is_private'] ?? false;
-
-                                  return Card(
-                                    margin: const EdgeInsets.only(bottom: 16),
-                                    child: InkWell(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                PostDetailScreen(post: post),
-                                          ),
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                CircleAvatar(
-                                                  backgroundImage: profile !=
-                                                              null &&
-                                                          profile['avatar_url'] !=
-                                                              null
-                                                      ? NetworkImage(
-                                                          profile['avatar_url'])
-                                                      : null,
-                                                  child: profile == null ||
-                                                          profile['avatar_url'] ==
-                                                              null
-                                                      ? Text(displayName[0]
-                                                          .toUpperCase())
-                                                      : null,
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        displayName,
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleMedium
-                                                            ?.copyWith(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                      ),
-                                                      Text(
-                                                        timestamp,
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color: Colors
-                                                                  .grey[600],
-                                                            ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.end,
-                                                  children: [
-                                                    if (post['media_type'] !=
-                                                        null)
-                                                      Chip(
-                                                        label: Text(
-                                                            post['media_type']),
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                      ),
-                                                    const SizedBox(height: 4),
-                                                    Chip(
-                                                      label: Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            isPrivate
-                                                                ? Icons.lock
-                                                                : Icons.public,
-                                                            size: 16,
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 4),
-                                                          Text(isPrivate
-                                                              ? 'Private'
-                                                              : 'Public'),
-                                                        ],
-                                                      ),
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                      backgroundColor: isPrivate
-                                                          ? Colors.orange[100]
-                                                          : Colors.green[100],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              post['content'] ?? '',
+                                const SizedBox(width: 4),
+                                // Post Type Filter Button
+                                Expanded(
+                                  child: PopupMenuButton<String>(
+                                    initialValue: _postTypeFilter,
+                                    onSelected: (value) {
+                                      setState(() {
+                                        _postTypeFilter = value;
+                                      });
+                                      _loadPosts();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Theme.of(context).dividerColor,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                              _getPostTypeIcon(_postTypeFilter),
+                                              size: 18),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              _postTypeFilter == 'all'
+                                                  ? 'Type'
+                                                  : _postTypeFilter.replaceAll(
+                                                      ' Post', ''),
                                               style: Theme.of(context)
                                                   .textTheme
-                                                  .bodyLarge,
+                                                  .bodySmall,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            const SizedBox(height: 12),
-
-                                            // Reaction Bar
-                                            _buildReactionBar(post['id']),
-
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.comment_outlined,
-                                                  size: 16,
-                                                  color: Colors.grey[600],
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'View comments',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color: Colors.grey[600],
-                                                      ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Icon(
-                                                  Icons.arrow_forward_ios,
-                                                  size: 12,
-                                                  color: Colors.grey[600],
-                                                ),
-                                                const Spacer(),
-                                                PopupMenuButton<String>(
-                                                  icon: Icon(
-                                                    Icons.more_vert,
-                                                    color: Colors.grey[600],
-                                                    size: 20,
-                                                  ),
-                                                  onSelected: (value) =>
-                                                      _handlePostAction(
-                                                          value, post),
-                                                  itemBuilder: (context) => [
-                                                    const PopupMenuItem(
-                                                      value: 'share',
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(Icons.share),
-                                                          SizedBox(width: 12),
-                                                          Text('Share'),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const PopupMenuItem(
-                                                      value: 'copy_link',
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(Icons.link),
-                                                          SizedBox(width: 12),
-                                                          Text('Copy Link'),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const PopupMenuItem(
-                                                      value: 'report',
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(Icons.flag),
-                                                          SizedBox(width: 12),
-                                                          Text('Report'),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    if (post['user_id'] ==
-                                                        Supabase
-                                                            .instance
-                                                            .client
-                                                            .auth
-                                                            .currentUser
-                                                            ?.id) ...[
-                                                      const PopupMenuDivider(),
-                                                      const PopupMenuItem(
-                                                        value: 'edit',
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(Icons.edit),
-                                                            SizedBox(width: 12),
-                                                            Text('Edit'),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const PopupMenuItem(
-                                                        value: 'delete',
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(Icons.delete,
-                                                                color:
-                                                                    Colors.red),
-                                                            SizedBox(width: 12),
-                                                            Text('Delete',
-                                                                style: TextStyle(
-                                                                    color: Colors
-                                                                        .red)),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'all',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.all_inclusive),
+                                            SizedBox(width: 8),
+                                            Text('All Types'),
                                           ],
                                         ),
                                       ),
+                                      const PopupMenuItem(
+                                        value: 'Text Post',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.text_fields),
+                                            SizedBox(width: 8),
+                                            Text('Text Posts'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Photo',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.photo),
+                                            SizedBox(width: 8),
+                                            Text('Photos'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Video',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.videocam),
+                                            SizedBox(width: 8),
+                                            Text('Videos'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Link',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.link),
+                                            SizedBox(width: 8),
+                                            Text('Links'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'Poll',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.poll),
+                                            SizedBox(width: 8),
+                                            Text('Polls'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                // Sort Button
+                                Expanded(
+                                  child: PopupMenuButton<String>(
+                                    initialValue: _sortBy,
+                                    onSelected: (value) {
+                                      setState(() {
+                                        _sortBy = value;
+                                      });
+                                      _loadPosts();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Theme.of(context).dividerColor,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.sort, size: 18),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              '${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  );
-                                },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'newest',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.new_releases),
+                                            SizedBox(width: 8),
+                                            Text('Newest First'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'oldest',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.history),
+                                            SizedBox(width: 8),
+                                            Text('Oldest First'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'popular',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.trending_up),
+                                            SizedBox(width: 8),
+                                            Text('Most Popular'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Posts List
+                          if (_isLoadingPosts)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: CircularProgressIndicator(),
                               ),
-                          ],
-                        ),
+                            )
+                          else if (_posts.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.feed,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No posts yet',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Create your first post to get started!',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _posts.length,
+                              itemBuilder: (context, index) {
+                                final post = _posts[index];
+                                final profile = post['profiles'];
+                                final displayName = profile != null
+                                    ? (profile['display_name'] ??
+                                        profile['handle'] ??
+                                        'Unknown User')
+                                    : 'Unknown User';
+                                final createdAt =
+                                    DateTime.parse(post['created_at']);
+                                final timestamp = _formatTimestamp(createdAt);
+                                final isPrivate = post['is_private'] ?? false;
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              PostDetailScreen(post: post),
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                backgroundImage: profile !=
+                                                            null &&
+                                                        profile['avatar_url'] !=
+                                                            null
+                                                    ? NetworkImage(
+                                                        profile['avatar_url'])
+                                                    : null,
+                                                child: profile == null ||
+                                                        profile['avatar_url'] ==
+                                                            null
+                                                    ? Text(displayName[0]
+                                                        .toUpperCase())
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      displayName,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .titleMedium
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                    ),
+                                                    Text(
+                                                      timestamp,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  if (post['media_type'] !=
+                                                      null)
+                                                    Chip(
+                                                      label: Text(
+                                                          post['media_type']),
+                                                      padding: EdgeInsets.zero,
+                                                    ),
+                                                  const SizedBox(height: 4),
+                                                  Chip(
+                                                    label: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          isPrivate
+                                                              ? Icons.lock
+                                                              : Icons.public,
+                                                          size: 16,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        Text(isPrivate
+                                                            ? 'Private'
+                                                            : 'Public'),
+                                                      ],
+                                                    ),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                    backgroundColor: isPrivate
+                                                        ? Colors.orange[100]
+                                                        : Colors.green[100],
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            post['content'] ?? '',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge,
+                                          ),
+                                          const SizedBox(height: 12),
+
+                                          // Reaction Bar
+                                          _buildReactionBar(post['id']),
+
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.comment_outlined,
+                                                size: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'View comments',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Colors.grey[600],
+                                                    ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                              const Spacer(),
+                                              PopupMenuButton<String>(
+                                                icon: Icon(
+                                                  Icons.more_vert,
+                                                  color: Colors.grey[600],
+                                                  size: 20,
+                                                ),
+                                                onSelected: (value) =>
+                                                    _handlePostAction(
+                                                        value, post),
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem(
+                                                    value: 'share',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.share),
+                                                        SizedBox(width: 12),
+                                                        Text('Share'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'copy_link',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.link),
+                                                        SizedBox(width: 12),
+                                                        Text('Copy Link'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'report',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.flag),
+                                                        SizedBox(width: 12),
+                                                        Text('Report'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (post['user_id'] ==
+                                                      Supabase
+                                                          .instance
+                                                          .client
+                                                          .auth
+                                                          .currentUser
+                                                          ?.id) ...[
+                                                    const PopupMenuDivider(),
+                                                    const PopupMenuItem(
+                                                      value: 'edit',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.edit),
+                                                          SizedBox(width: 12),
+                                                          Text('Edit'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'delete',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.delete,
+                                                              color:
+                                                                  Colors.red),
+                                                          SizedBox(width: 12),
+                                                          Text('Delete',
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .red)),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                if (showMessageCenter) ...[
-                  // Draggable divider
-                  MouseRegion(
-                    cursor: SystemMouseCursors.resizeColumn,
-                    child: GestureDetector(
-                      onHorizontalDragStart: (_) {
-                        setState(() => _isResizing = true);
-                      },
-                      onHorizontalDragUpdate: (details) {
-                        setState(() {
-                          _messageCenterWidth =
-                              (_messageCenterWidth - details.delta.dx)
-                                  .clamp(200.0, 600.0);
-                        });
-                      },
-                      onHorizontalDragEnd: (_) {
-                        setState(() => _isResizing = false);
-                      },
-                      child: Container(
-                        width: 8,
-                        color: _isResizing
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.5)
-                            : Colors.transparent,
-                        child: Center(
-                          child: Container(
-                            width: 2,
-                            color: Theme.of(context).dividerColor,
+                ),
+                // Notifications panel - positioned on left
+                if (showNotifications)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: _notificationsPanelWidth,
+                          child: const NotificationsPanel(),
+                        ),
+                        // Draggable divider for notifications
+                        MouseRegion(
+                          cursor: SystemMouseCursors.resizeColumn,
+                          child: GestureDetector(
+                            onHorizontalDragStart: (_) {
+                              setState(() => _isResizingNotifications = true);
+                            },
+                            onHorizontalDragUpdate: (details) {
+                              setState(() {
+                                _notificationsPanelWidth =
+                                    (_notificationsPanelWidth +
+                                            details.delta.dx)
+                                        .clamp(200.0, 400.0);
+                              });
+                            },
+                            onHorizontalDragEnd: (_) {
+                              setState(() => _isResizingNotifications = false);
+                            },
+                            child: Container(
+                              width: 8,
+                              color: _isResizingNotifications
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.5)
+                                  : Colors.transparent,
+                              child: Center(
+                                child: Container(
+                                  width: 2,
+                                  color: Theme.of(context).dividerColor,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                  // Message center with dynamic width
-                  SizedBox(
-                    width: _messageCenterWidth,
-                    child: const MessageCenter(),
+                // Message center - positioned on right
+                if (showMessageCenter)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Row(
+                      children: [
+                        // Draggable divider
+                        MouseRegion(
+                          cursor: SystemMouseCursors.resizeColumn,
+                          child: GestureDetector(
+                            onHorizontalDragStart: (_) {
+                              setState(() => _isResizing = true);
+                            },
+                            onHorizontalDragUpdate: (details) {
+                              setState(() {
+                                _messageCenterWidth =
+                                    (_messageCenterWidth - details.delta.dx)
+                                        .clamp(200.0, 600.0);
+                              });
+                            },
+                            onHorizontalDragEnd: (_) {
+                              setState(() => _isResizing = false);
+                            },
+                            child: Container(
+                              width: 8,
+                              color: _isResizing
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.5)
+                                  : Colors.transparent,
+                              child: Center(
+                                child: Container(
+                                  width: 2,
+                                  color: Theme.of(context).dividerColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Message center with dynamic width
+                        SizedBox(
+                          width: _messageCenterWidth,
+                          child: const MessageCenter(),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
               ],
             );
           },
