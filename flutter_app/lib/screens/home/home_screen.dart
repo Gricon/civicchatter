@@ -272,63 +272,60 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: CivicChatterAppBar(
         title: 'Home',
         showBackButton: false,
-        actions: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _handleLogout,
-                tooltip: 'Logout',
-              ),
-              // Public/Private Toggle
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Public',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: !_showPrivatePosts
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontWeight: !_showPrivatePosts
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Transform.scale(
-                      scale: 0.8,
-                      child: Switch(
-                        value: _showPrivatePosts,
-                        onChanged: (value) {
-                          setState(() {
-                            _showPrivatePosts = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Private',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: _showPrivatePosts
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontWeight: _showPrivatePosts
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ],
+        titleWidget: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Home'),
+            const SizedBox(width: 16),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Public',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: !_showPrivatePosts
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: !_showPrivatePosts
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: _showPrivatePosts,
+                    onChanged: (value) {
+                      setState(() {
+                        _showPrivatePosts = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Private',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _showPrivatePosts
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: _showPrivatePosts
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
           ),
         ],
       ),

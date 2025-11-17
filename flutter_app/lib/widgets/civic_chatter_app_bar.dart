@@ -6,12 +6,14 @@ class CivicChatterAppBar extends StatelessWidget
   final String title;
   final List<Widget>? actions;
   final bool showBackButton;
+  final Widget? titleWidget;
 
   const CivicChatterAppBar({
     super.key,
     required this.title,
     this.actions,
     this.showBackButton = true,
+    this.titleWidget,
   });
 
   @override
@@ -123,7 +125,7 @@ class CivicChatterAppBar extends StatelessWidget
         ),
         // Page Title
         AppBar(
-          title: Text(title),
+          title: titleWidget ?? Text(title),
           automaticallyImplyLeading: false,
           centerTitle: true,
         ),
