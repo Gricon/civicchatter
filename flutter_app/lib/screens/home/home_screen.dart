@@ -35,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Filter and sort options
   String _sortBy = 'newest'; // newest, oldest, popular
   String _filterBy = 'all'; // all, public, private
+  String _postTypeFilter = 'all'; // all, Text Post, Photo, Video, Link, Poll
 
   @override
   void initState() {
@@ -62,11 +63,16 @@ class _HomeScreenState extends State<HomeScreen> {
       // Build query based on filter
       var query = supabase.from('posts').select('*');
 
-      // Apply filter
+      // Apply privacy filter
       if (_filterBy == 'public') {
         query = query.eq('is_private', false);
       } else if (_filterBy == 'private') {
         query = query.eq('is_private', true);
+      }
+
+      // Apply post type filter
+      if (_postTypeFilter != 'all') {
+        query = query.eq('media_type', _postTypeFilter);
       }
 
       // Apply sort and execute
@@ -1178,7 +1184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Row(
                           children: [
-                            // Filter Button
+                            // Privacy Filter Button
                             Expanded(
                               child: PopupMenuButton<String>(
                                 initialValue: _filterBy,
@@ -1190,7 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                      horizontal: 8, vertical: 8),
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: Theme.of(context).dividerColor,
@@ -1200,13 +1206,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.filter_list, size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Filter: ${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
+                                      const Icon(Icons.visibility, size: 18),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          '${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1245,7 +1254,112 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 4),
+                            // Post Type Filter Button
+                            Expanded(
+                              child: PopupMenuButton<String>(
+                                initialValue: _postTypeFilter,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _postTypeFilter = value;
+                                  });
+                                  _loadPosts();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(_getPostTypeIcon(_postTypeFilter),
+                                          size: 18),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          _postTypeFilter == 'all'
+                                              ? 'Type'
+                                              : _postTypeFilter.replaceAll(
+                                                  ' Post', ''),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'all',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.all_inclusive),
+                                        SizedBox(width: 8),
+                                        Text('All Types'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'Text Post',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.text_fields),
+                                        SizedBox(width: 8),
+                                        Text('Text Posts'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'Photo',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.photo),
+                                        SizedBox(width: 8),
+                                        Text('Photos'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'Video',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.videocam),
+                                        SizedBox(width: 8),
+                                        Text('Videos'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'Link',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.link),
+                                        SizedBox(width: 8),
+                                        Text('Links'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'Poll',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.poll),
+                                        SizedBox(width: 8),
+                                        Text('Polls'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
                             // Sort Button
                             Expanded(
                               child: PopupMenuButton<String>(
@@ -1258,7 +1372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
+                                      horizontal: 8, vertical: 8),
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: Theme.of(context).dividerColor,
@@ -1268,13 +1382,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.sort, size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Sort: ${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
+                                      const Icon(Icons.sort, size: 18),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          '${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),
