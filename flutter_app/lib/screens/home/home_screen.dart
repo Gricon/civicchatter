@@ -40,13 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String _filterBy = 'all'; // all, public, private
   String _postTypeFilter = 'all'; // all, Text Post, Photo, Video, Link, Poll
 
-  // Message center resizing
-  double _messageCenterWidth = 300.0;
-  bool _isResizing = false;
-
-  // Notifications panel resizing
-  double _notificationsPanelWidth = 280.0;
-  bool _isResizingNotifications = false;
+  // Dropdown overlays
+  bool _showNotificationsDropdown = false;
+  bool _showMessagesDropdown = false;
+  final GlobalKey _notificationsButtonKey = GlobalKey();
+  final GlobalKey _messagesButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -842,24 +840,29 @@ class _HomeScreenState extends State<HomeScreen> {
           showBackButton: false,
           actions: [
             IconButton(
+              key: _notificationsButtonKey,
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () {
-                // TODO: Navigate to notifications or show notifications panel
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Notifications feature coming soon!')),
-                );
+                setState(() {
+                  _showNotificationsDropdown = !_showNotificationsDropdown;
+                  if (_showNotificationsDropdown) {
+                    _showMessagesDropdown = false; // Close messages if open
+                  }
+                });
               },
               tooltip: 'Notifications',
             ),
             IconButton(
+              key: _messagesButtonKey,
               icon: const Icon(Icons.message_outlined),
               onPressed: () {
-                // TODO: Navigate to messages or show message center
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Messages feature coming soon!')),
-                );
+                setState(() {
+                  _showMessagesDropdown = !_showMessagesDropdown;
+                  if (_showMessagesDropdown) {
+                    _showNotificationsDropdown =
+                        false; // Close notifications if open
+                  }
+                });
               },
               tooltip: 'Messages',
             ),
@@ -874,8 +877,6 @@ class _HomeScreenState extends State<HomeScreen> {
         body: LayoutBuilder(
           builder: (context, constraints) {
             // Responsive: constrain max width on large screens (web/tablet)
-            final showMessageCenter = constraints.maxWidth > 1000;
-            final showNotifications = constraints.maxWidth > 1200;
             final maxWidth = 800.0;
 
             return Stack(
@@ -1781,104 +1782,140 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                // Notifications panel - positioned on left
-                if (showNotifications)
+                // Notifications dropdown overlay
+                if (_showNotificationsDropdown)
                   Positioned(
-                    left: 0,
                     top: 0,
-                    bottom: 0,
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: _notificationsPanelWidth,
-                          child: const NotificationsPanel(),
-                        ),
-                        // Draggable divider for notifications
-                        MouseRegion(
-                          cursor: SystemMouseCursors.resizeColumn,
-                          child: GestureDetector(
-                            onHorizontalDragStart: (_) {
-                              setState(() => _isResizingNotifications = true);
-                            },
-                            onHorizontalDragUpdate: (details) {
-                              setState(() {
-                                _notificationsPanelWidth =
-                                    (_notificationsPanelWidth +
-                                            details.delta.dx)
-                                        .clamp(200.0, 400.0);
-                              });
-                            },
-                            onHorizontalDragEnd: (_) {
-                              setState(() => _isResizingNotifications = false);
-                            },
-                            child: Container(
-                              width: 8,
-                              color: _isResizingNotifications
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.5)
-                                  : Colors.transparent,
-                              child: Center(
-                                child: Container(
-                                  width: 2,
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                              ),
-                            ),
+                    right: MediaQuery.of(context).size.width > 600 ? 120 : 60,
+                    child: Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 350,
+                        height: 500,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
                           ),
                         ),
-                      ],
+                        child: Column(
+                          children: [
+                            // Header with close button
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Theme.of(context).dividerColor,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.notifications_outlined),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Notifications',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () {
+                                      setState(() {
+                                        _showNotificationsDropdown = false;
+                                      });
+                                    },
+                                    iconSize: 20,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Notifications content
+                            const Expanded(
+                              child: NotificationsPanel(),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                // Message center - positioned on right
-                if (showMessageCenter)
+                // Messages dropdown overlay
+                if (_showMessagesDropdown)
                   Positioned(
-                    right: 0,
                     top: 0,
-                    bottom: 0,
-                    child: Row(
-                      children: [
-                        // Draggable divider
-                        MouseRegion(
-                          cursor: SystemMouseCursors.resizeColumn,
-                          child: GestureDetector(
-                            onHorizontalDragStart: (_) {
-                              setState(() => _isResizing = true);
-                            },
-                            onHorizontalDragUpdate: (details) {
-                              setState(() {
-                                _messageCenterWidth =
-                                    (_messageCenterWidth - details.delta.dx)
-                                        .clamp(200.0, 600.0);
-                              });
-                            },
-                            onHorizontalDragEnd: (_) {
-                              setState(() => _isResizing = false);
-                            },
-                            child: Container(
-                              width: 8,
-                              color: _isResizing
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.5)
-                                  : Colors.transparent,
-                              child: Center(
-                                child: Container(
-                                  width: 2,
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                              ),
-                            ),
+                    right: MediaQuery.of(context).size.width > 600 ? 60 : 10,
+                    child: Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 400,
+                        height: 600,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
                           ),
                         ),
-                        // Message center with dynamic width
-                        SizedBox(
-                          width: _messageCenterWidth,
-                          child: const MessageCenter(),
+                        child: Column(
+                          children: [
+                            // Header with close button
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Theme.of(context).dividerColor,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.message_outlined),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Messages',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () {
+                                      setState(() {
+                                        _showMessagesDropdown = false;
+                                      });
+                                    },
+                                    iconSize: 20,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Messages content
+                            const Expanded(
+                              child: MessageCenter(),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
               ],
