@@ -135,5 +135,5 @@ class CivicChatterAppBar extends StatelessWidget
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(138);
+  Size get preferredSize => const Size.fromHeight(145);
 }
