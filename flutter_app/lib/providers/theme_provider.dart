@@ -105,11 +105,46 @@ class ThemeProvider with ChangeNotifier {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor:
+              isDark ? const Color(0xFF3B82F6) : colorScheme.primary,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor:
+              isDark ? const Color(0xFF60A5FA) : colorScheme.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor:
+              isDark ? const Color(0xFF60A5FA) : colorScheme.primary,
+          side: BorderSide(
+            color: isDark ? const Color(0xFF60A5FA) : colorScheme.primary,
+            width: 2,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: isDark ? const Color(0xFF3B82F6) : colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor:
+              isDark ? const Color(0xFF60A5FA) : colorScheme.primary,
         ),
       ),
       cardTheme: CardThemeData(
