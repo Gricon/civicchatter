@@ -268,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.user;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: CivicChatterAppBar(
         title: 'Home',
         showBackButton: false,
@@ -333,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: maxWidth),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
@@ -362,11 +364,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             TextField(
                               controller: _contentController,
                               maxLines: 4,
+                              minLines: 2,
                               decoration: InputDecoration(
                                 hintText: 'What\'s on your mind?',
                                 border: OutlineInputBorder(
