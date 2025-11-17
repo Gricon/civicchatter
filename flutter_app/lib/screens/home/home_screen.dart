@@ -38,6 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _filterBy = 'all'; // all, public, private
   String _postTypeFilter = 'all'; // all, Text Post, Photo, Video, Link, Poll
 
+  // Message center resizing
+  double _messageCenterWidth = 300.0;
+  bool _isResizing = false;
+
   @override
   void initState() {
     super.initState();
@@ -1782,11 +1786,47 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                if (showMessageCenter)
-                  const SizedBox(
-                    width: 300,
-                    child: MessageCenter(),
+                if (showMessageCenter) ...[
+                  // Draggable divider
+                  MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn,
+                    child: GestureDetector(
+                      onHorizontalDragStart: (_) {
+                        setState(() => _isResizing = true);
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          _messageCenterWidth =
+                              (_messageCenterWidth - details.delta.dx)
+                                  .clamp(200.0, 600.0);
+                        });
+                      },
+                      onHorizontalDragEnd: (_) {
+                        setState(() => _isResizing = false);
+                      },
+                      child: Container(
+                        width: 8,
+                        color: _isResizing
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.5)
+                            : Colors.transparent,
+                        child: Center(
+                          child: Container(
+                            width: 2,
+                            color: Theme.of(context).dividerColor,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
+                  // Message center with dynamic width
+                  SizedBox(
+                    width: _messageCenterWidth,
+                    child: const MessageCenter(),
+                  ),
+                ],
               ],
             );
           },
