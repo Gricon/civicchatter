@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import 'dart:convert';
 
 class BackgroundSettingsScreen extends StatefulWidget {
   const BackgroundSettingsScreen({super.key});
@@ -66,8 +67,12 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
       );
 
       if (image != null) {
+        // Read image as bytes and convert to base64
+        final bytes = await image.readAsBytes();
+        final base64Image = base64Encode(bytes);
+
         setState(() {
-          _backgroundImagePath = image.path;
+          _backgroundImagePath = base64Image;
           _backgroundType = 'image';
         });
       }

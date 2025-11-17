@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class CustomBackground extends StatefulWidget {
   final Widget child;
@@ -32,6 +34,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
           Color(prefs.getInt('background_gradient_start') ?? 0xFF667eea);
       _gradientEndColor =
           Color(prefs.getInt('background_gradient_end') ?? 0xFF764ba2);
+      _backgroundImagePath = prefs.getString('background_image_path');
     });
   }
 
@@ -65,12 +68,33 @@ class _CustomBackgroundState extends State<CustomBackground> {
         );
         break;
       case 'image':
-        // Image background not supported on web yet
-        background = Container(
-          decoration: BoxDecoration(
-            color: _solidColor,
-          ),
-        );
+        if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty) {
+          try {
+            // Decode base64 image
+            final Uint8List bytes = base64Decode(_backgroundImagePath!);
+            background = Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: MemoryImage(bytes),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            );
+          } catch (e) {
+            // If decoding fails, use solid color fallback
+            background = Container(
+              decoration: BoxDecoration(
+                color: _solidColor,
+              ),
+            );
+          }
+        } else {
+          background = Container(
+            decoration: BoxDecoration(
+              color: _solidColor,
+            ),
+          );
+        }
         break;
       default:
         background = Container();
