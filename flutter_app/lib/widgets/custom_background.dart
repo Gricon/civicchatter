@@ -13,6 +13,14 @@ class CustomBackground extends StatefulWidget {
 }
 
 class _CustomBackgroundState extends State<CustomBackground> {
+  // Static cache to avoid reloading on every navigation
+  static String? _cachedBackgroundType;
+  static Color? _cachedSolidColor;
+  static Color? _cachedGradientStartColor;
+  static Color? _cachedGradientEndColor;
+  static String? _cachedBackgroundImagePath;
+  static bool _hasLoadedOnce = false;
+
   String _backgroundType = 'default';
   Color _solidColor = const Color(0xFFF5F5F5);
   Color _gradientStartColor = const Color(0xFF667eea);
@@ -22,20 +30,46 @@ class _CustomBackgroundState extends State<CustomBackground> {
   @override
   void initState() {
     super.initState();
+    // Use cached values if available
+    if (_hasLoadedOnce) {
+      _backgroundType = _cachedBackgroundType ?? 'default';
+      _solidColor = _cachedSolidColor ?? const Color(0xFFF5F5F5);
+      _gradientStartColor =
+          _cachedGradientStartColor ?? const Color(0xFF667eea);
+      _gradientEndColor = _cachedGradientEndColor ?? const Color(0xFF764ba2);
+      _backgroundImagePath = _cachedBackgroundImagePath;
+    }
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _backgroundType = prefs.getString('background_type') ?? 'default';
-      _solidColor = Color(prefs.getInt('background_solid_color') ?? 0xFFF5F5F5);
-      _gradientStartColor =
-          Color(prefs.getInt('background_gradient_start') ?? 0xFF667eea);
-      _gradientEndColor =
-          Color(prefs.getInt('background_gradient_end') ?? 0xFF764ba2);
-      _backgroundImagePath = prefs.getString('background_image_path');
-    });
+    final newBackgroundType = prefs.getString('background_type') ?? 'default';
+    final newSolidColor =
+        Color(prefs.getInt('background_solid_color') ?? 0xFFF5F5F5);
+    final newGradientStartColor =
+        Color(prefs.getInt('background_gradient_start') ?? 0xFF667eea);
+    final newGradientEndColor =
+        Color(prefs.getInt('background_gradient_end') ?? 0xFF764ba2);
+    final newBackgroundImagePath = prefs.getString('background_image_path');
+
+    // Update cache
+    _cachedBackgroundType = newBackgroundType;
+    _cachedSolidColor = newSolidColor;
+    _cachedGradientStartColor = newGradientStartColor;
+    _cachedGradientEndColor = newGradientEndColor;
+    _cachedBackgroundImagePath = newBackgroundImagePath;
+    _hasLoadedOnce = true;
+
+    if (mounted) {
+      setState(() {
+        _backgroundType = newBackgroundType;
+        _solidColor = newSolidColor;
+        _gradientStartColor = newGradientStartColor;
+        _gradientEndColor = newGradientEndColor;
+        _backgroundImagePath = newBackgroundImagePath;
+      });
+    }
   }
 
   @override
