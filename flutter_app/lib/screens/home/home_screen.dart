@@ -1292,141 +1292,218 @@ class _HomeScreenState extends State<HomeScreen> {
         .map((key) => key.substring(7)) // Remove 'custom_' prefix
         .toList();
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    // Calculate total reactions
+    int totalReactions = 0;
+    for (var count in reactions.values) {
+      totalReactions += count;
+    }
+
+    // Get user's current reaction display
+    String userReactionDisplay = '👍';
+    String userReactionLabel = 'React';
+
+    if (userReaction != null) {
+      if (userReaction.startsWith('custom_')) {
+        userReactionDisplay = userReaction.substring(7);
+        userReactionLabel = 'Reacted';
+      } else {
+        final selectedReaction = reactionButtons.firstWhere(
+          (r) => r['type'] == userReaction,
+          orElse: () => {'emoji': '👍', 'label': 'React'},
+        );
+        userReactionDisplay = selectedReaction['emoji'] as String;
+        userReactionLabel = 'Reacted';
+      }
+    }
+
+    return Row(
       children: [
-        // Standard reaction buttons
-        ...reactionButtons.map((reaction) {
-          final type = reaction['type'] as String;
-          final emoji = reaction['emoji'] as String;
-          final count = reactions[type] ?? 0;
-          final isSelected = userReaction == type;
+        // Reaction dropdown button
+        PopupMenuButton<String>(
+          offset: const Offset(0, -10),
+          onSelected: (value) {
+            if (value == 'custom') {
+              _showCustomReactionPicker(postId);
+            } else if (value.startsWith('custom_')) {
+              final emoji = value.substring(7);
+              _toggleCustomReaction(postId, emoji);
+            } else {
+              _toggleReaction(postId, value);
+            }
+          },
+          itemBuilder: (context) => [
+            // Standard reactions
+            ...reactionButtons.map((reaction) {
+              final type = reaction['type'] as String;
+              final emoji = reaction['emoji'] as String;
+              final label = reaction['label'] as String;
+              final count = reactions[type] ?? 0;
+              final isSelected = userReaction == type;
 
-          return InkWell(
-            onTap: () => _toggleReaction(postId, type),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Theme.of(context).primaryColor.withOpacity(0.2)
-                    : Theme.of(context).cardColor,
-                border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : Theme.of(context).dividerColor,
-                  width: isSelected ? 2 : 1,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      count.toString(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              return PopupMenuItem<String>(
+                value: type,
+                child: Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(label)),
+                    if (count > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          count.toString(),
+                          style: TextStyle(
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: isSelected
-                                ? Theme.of(context).primaryColor
-                                : null,
+                            color: isSelected ? Colors.white : Colors.black87,
                           ),
-                    ),
+                        ),
+                      ),
+                    ],
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.check,
+                        size: 18,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ],
                   ],
+                ),
+              );
+            }).toList(),
+
+            // Divider before custom reactions if any exist
+            if (customReactions.isNotEmpty) const PopupMenuDivider(),
+
+            // Custom reactions that have been used
+            ...customReactions.map((emoji) {
+              final customKey = 'custom_$emoji';
+              final count = reactions[customKey] ?? 0;
+              final isSelected = userReaction == customKey;
+
+              return PopupMenuItem<String>(
+                value: customKey,
+                child: Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Custom')),
+                    if (count > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          count.toString(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.check,
+                        size: 18,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+
+            // Divider before add custom option
+            const PopupMenuDivider(),
+
+            // Add custom reaction option
+            const PopupMenuItem<String>(
+              value: 'custom',
+              child: Row(
+                children: [
+                  Icon(Icons.add_reaction_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Add Custom Reaction'),
                 ],
               ),
             ),
-          );
-        }).toList(),
-
-        // Custom reaction buttons (show ones that have been used)
-        ...customReactions.map((emoji) {
-          final customKey = 'custom_$emoji';
-          final count = reactions[customKey] ?? 0;
-          final isSelected = userReaction == customKey;
-
-          return InkWell(
-            onTap: () => _toggleCustomReaction(postId, emoji),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Theme.of(context).primaryColor.withOpacity(0.2)
-                    : Theme.of(context).cardColor,
-                border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : Theme.of(context).dividerColor,
-                  width: isSelected ? 2 : 1,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      count.toString(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected
-                                ? Theme.of(context).primaryColor
-                                : null,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-
-        // Add custom reaction button
-        InkWell(
-          onTap: () => _showCustomReactionPicker(postId),
-          borderRadius: BorderRadius.circular(20),
+          ],
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+              color: userReaction != null
+                  ? Theme.of(context).primaryColor.withOpacity(0.2)
+                  : Theme.of(context).cardColor,
               border: Border.all(
-                color: Theme.of(context).primaryColor,
-                width: 1,
+                color: userReaction != null
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).dividerColor,
+                width: userReaction != null ? 2 : 1,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.add_reaction_outlined,
-                  size: 18,
-                  color: Theme.of(context).primaryColor,
+                Text(
+                  userReactionDisplay,
+                  style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'Custom',
+                  userReactionLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
+                        color: userReaction != null
+                            ? Theme.of(context).primaryColor
+                            : null,
                       ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 18,
+                  color: userReaction != null
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey[600],
                 ),
               ],
             ),
           ),
         ),
+
+        // Show total reaction count if there are any
+        if (totalReactions > 0) ...[
+          const SizedBox(width: 8),
+          Text(
+            '$totalReactions ${totalReactions == 1 ? 'reaction' : 'reactions'}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+        ],
       ],
     );
   }
