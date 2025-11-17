@@ -33,6 +33,9 @@ dependencies:
   # URL handling
   url_launcher: ^6.2.1
   
+  # Share functionality
+  share_plus: ^10.1.2
+  
   # Image processing (for cartoon filter)
   image: ^4.1.3
   

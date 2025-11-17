@@ -233,10 +233,7 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
                     subtitle: const Text('Manage your friends list'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Friends list coming soon!')),
-                      );
+                      context.push('/friends');
                     },
                   ),
                 ),

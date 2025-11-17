@@ -6,6 +6,7 @@ import '../screens/auth/signup_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/profile/private_profile_screen.dart';
 import '../screens/profile/public_profile_screen.dart';
+import '../screens/friends/friends_screen.dart';
 import '../screens/debates/debates_screen.dart';
 import '../screens/debates/debate_detail_screen.dart';
 import '../screens/settings/settings_screen.dart';
@@ -95,6 +96,13 @@ class AppRouter {
         name: 'debates',
         pageBuilder: (context, state) => NoTransitionPage(
           child: const DebatesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/friends',
+        name: 'friends',
+        pageBuilder: (context, state) => NoTransitionPage(
+          child: const FriendsScreen(),
         ),
       ),
       GoRoute(
