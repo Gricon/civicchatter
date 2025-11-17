@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 
@@ -159,22 +160,50 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    String message = 'Posting $_selectedPostType';
-    if (_selectedFile != null) {
-      message += ' (${_selectedFile!.name})';
-    }
-    message += ' as ${_showPrivatePosts ? "Private" : "Public"}...';
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final user = authProvider.user;
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
+      if (user == null) {
+        throw Exception('You must be logged in to post');
+      }
 
-    setState(() {
-      _quillController?.clear();
-      _selectedFile = null;
-    });
+      // Get the Supabase client
+      final supabase = Supabase.instance.client;
+
+      // Insert post into database
+      await supabase.from('posts').insert({
+        'user_id': user.id,
+        'content': plainText,
+        'media_url': _selectedFile?.path,
+        'media_type': _selectedPostType,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${_showPrivatePosts ? "Private" : "Public"} post created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      setState(() {
+        _quillController?.clear();
+        _selectedFile = null;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error posting: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleLogout() async {
