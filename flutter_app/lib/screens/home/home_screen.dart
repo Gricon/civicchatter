@@ -272,50 +272,55 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: CivicChatterAppBar(
         title: 'Home',
         showBackButton: false,
-        titleWidget: Row(
+        titleWidget: Stack(
           children: [
-            const Text('Home'),
-            const Spacer(),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Public',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: !_showPrivatePosts
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface,
-                    fontWeight: !_showPrivatePosts
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+            const Center(
+              child: Text('Home'),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Public',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: !_showPrivatePosts
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: !_showPrivatePosts
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Transform.scale(
-                  scale: 0.8,
-                  child: Switch(
-                    value: _showPrivatePosts,
-                    onChanged: (value) {
-                      setState(() {
-                        _showPrivatePosts = value;
-                      });
-                    },
+                  const SizedBox(width: 4),
+                  Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: _showPrivatePosts,
+                      onChanged: (value) {
+                        setState(() {
+                          _showPrivatePosts = value;
+                        });
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Private',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _showPrivatePosts
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface,
-                    fontWeight:
-                        _showPrivatePosts ? FontWeight.bold : FontWeight.normal,
+                  const SizedBox(width: 4),
+                  Text(
+                    'Private',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _showPrivatePosts
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: _showPrivatePosts
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
