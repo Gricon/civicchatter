@@ -21,7 +21,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _isLoadingComments = false;
   bool _isSubmitting = false;
   Map<String, int> _reactions = {}; // reactionType -> count
-  String? _userReaction; // user's current reaction
+  Set<String> _userReactions = {}; // user's current reactions (up to 2)
 
   @override
   void initState() {
@@ -89,7 +89,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       // Process reactions
       final Map<String, int> reactionCounts = {};
-      String? userReaction;
+      final Set<String> userReactions = {};
 
       for (var reaction in reactionsResponse) {
         final reactionType = reaction['reaction_type'];
@@ -105,16 +105,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         reactionCounts[effectiveType] =
             (reactionCounts[effectiveType] ?? 0) + 1;
 
-        // Track user's own reaction
+        // Track user's own reactions (can have up to 2)
         if (userId != null && reactionUserId == userId) {
-          userReaction = effectiveType;
+          userReactions.add(effectiveType);
         }
       }
 
       if (mounted) {
         setState(() {
           _reactions = reactionCounts;
-          _userReaction = userReaction;
+          _userReactions = userReactions;
         });
       }
     } catch (e) {
@@ -130,27 +130,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       if (userId == null) return;
 
-      if (_userReaction == reactionType) {
-        // Remove reaction (clicking the same one again)
+      // Check if user already has this reaction
+      if (_userReactions.contains(reactionType)) {
+        // Remove this specific reaction
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('reaction_type', reactionType);
       } else {
-        // Use upsert to either insert or update the reaction
-        // This handles the unique constraint properly
-        await supabase.from('reactions').upsert(
-          {
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': reactionType,
-            'custom_emoji':
-                null, // Ensure custom_emoji is null for standard reactions
-          },
-          onConflict:
-              'post_id,user_id', // Specify the unique constraint columns
-        );
+        // Check if user already has 2 reactions
+        if (_userReactions.length >= 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You can only have up to 2 reactions per post'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Add new reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': reactionType,
+          'custom_emoji': null,
+        });
       }
 
       // Reload reactions
@@ -562,22 +571,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       totalReactions += count;
     }
 
-    // Get user's current reaction display
+    // Build display for user's reactions (can be up to 2)
     String userReactionDisplay = '👍';
     String userReactionLabel = 'React';
 
-    if (_userReaction != null) {
-      if (_userReaction!.startsWith('custom_')) {
-        userReactionDisplay = _userReaction!.substring(7);
-        userReactionLabel = 'Reacted';
-      } else {
-        final selectedReaction = reactionButtons.firstWhere(
-          (r) => r['type'] == _userReaction,
-          orElse: () => {'emoji': '👍', 'label': 'React'},
-        );
-        userReactionDisplay = selectedReaction['emoji'] as String;
-        userReactionLabel = 'Reacted';
+    if (_userReactions.isNotEmpty) {
+      // Show the emojis of user's reactions
+      final emojis = <String>[];
+      for (var reaction in _userReactions) {
+        if (reaction.startsWith('custom_')) {
+          emojis.add(reaction.substring(7));
+        } else {
+          final selectedReaction = reactionButtons.firstWhere(
+            (r) => r['type'] == reaction,
+            orElse: () => {'emoji': '👍'},
+          );
+          emojis.add(selectedReaction['emoji'] as String);
+        }
       }
+      userReactionDisplay = emojis.join(' ');
+      userReactionLabel = 'Reacted';
     }
 
     return Row(
@@ -602,7 +615,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               final emoji = reaction['emoji'] as String;
               final label = reaction['label'] as String;
               final count = _reactions[type] ?? 0;
-              final isSelected = _userReaction == type;
+              final isSelected = _userReactions.contains(type);
 
               return PopupMenuItem<String>(
                 value: type,
@@ -654,7 +667,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ...customReactions.map((emoji) {
               final customKey = 'custom_$emoji';
               final count = _reactions[customKey] ?? 0;
-              final isSelected = _userReaction == customKey;
+              final isSelected = _userReactions.contains(customKey);
 
               return PopupMenuItem<String>(
                 value: customKey,
@@ -717,14 +730,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _userReaction != null
+              color: _userReactions.isNotEmpty
                   ? Theme.of(context).primaryColor.withOpacity(0.2)
                   : Theme.of(context).cardColor,
               border: Border.all(
-                color: _userReaction != null
+                color: _userReactions.isNotEmpty
                     ? Theme.of(context).primaryColor
                     : Theme.of(context).dividerColor,
-                width: _userReaction != null ? 2 : 1,
+                width: _userReactions.isNotEmpty ? 2 : 1,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -740,7 +753,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   userReactionLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: _userReaction != null
+                        color: _userReactions.isNotEmpty
                             ? Theme.of(context).primaryColor
                             : null,
                       ),
@@ -749,7 +762,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 Icon(
                   Icons.arrow_drop_down,
                   size: 18,
-                  color: _userReaction != null
+                  color: _userReactions.isNotEmpty
                       ? Theme.of(context).primaryColor
                       : Colors.grey[600],
                 ),
@@ -871,26 +884,37 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       final customKey = 'custom_$emoji';
 
-      // If clicking the same custom emoji, remove it
-      if (_userReaction == customKey) {
+      // Check if user already has this custom reaction
+      if (_userReactions.contains(customKey)) {
+        // Remove this specific custom reaction
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('reaction_type', 'custom')
+            .eq('custom_emoji', emoji);
       } else {
-        // Use upsert to either insert or update the reaction
-        // This handles the unique constraint properly
-        await supabase.from('reactions').upsert(
-          {
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': 'custom',
-            'custom_emoji': emoji,
-          },
-          onConflict:
-              'post_id,user_id', // Specify the unique constraint columns
-        );
+        // Check if user already has 2 reactions
+        if (_userReactions.length >= 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You can only have up to 2 reactions per post'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Add new custom reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': 'custom',
+          'custom_emoji': emoji,
+        });
       }
 
       // Reload reactions

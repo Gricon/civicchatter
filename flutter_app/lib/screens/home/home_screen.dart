@@ -27,7 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingPosts = false;
   Map<String, Map<String, int>> _postReactions =
       {}; // postId -> {reactionType -> count}
-  Map<String, String?> _userReactions = {}; // postId -> userReactionType
+  Map<String, Set<String>> _userReactions =
+      {}; // postId -> Set of reaction keys (up to 2)
 
   // Filter and sort options
   String _sortBy = 'newest'; // newest, oldest, popular
@@ -158,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Process reactions
       final Map<String, Map<String, int>> reactionCounts = {};
-      final Map<String, String?> userReactions = {};
+      final Map<String, Set<String>> userReactions = {};
 
       for (var reaction in reactionsResponse) {
         final postId = reaction['post_id'];
@@ -178,9 +179,12 @@ class _HomeScreenState extends State<HomeScreen> {
         reactionCounts[postId]![effectiveType] =
             (reactionCounts[postId]![effectiveType] ?? 0) + 1;
 
-        // Track user's own reaction (store the effective type for custom emojis)
+        // Track user's own reactions (can have up to 2)
         if (userId != null && reactionUserId == userId) {
-          userReactions[postId] = effectiveType;
+          if (!userReactions.containsKey(postId)) {
+            userReactions[postId] = {};
+          }
+          userReactions[postId]!.add(effectiveType);
         }
       }
 
@@ -202,29 +206,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
-      final currentReaction = _userReactions[postId];
+      final userReactions = _userReactions[postId] ?? {};
 
-      if (currentReaction == reactionType) {
-        // Remove reaction (clicking the same one again)
+      // Check if user already has this reaction
+      if (userReactions.contains(reactionType)) {
+        // Remove this specific reaction
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('reaction_type', reactionType);
       } else {
-        // Use upsert to either insert or update the reaction
-        // This handles the unique constraint properly
-        await supabase.from('reactions').upsert(
-          {
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': reactionType,
-            'custom_emoji':
-                null, // Ensure custom_emoji is null for standard reactions
-          },
-          onConflict:
-              'post_id,user_id', // Specify the unique constraint columns
-        );
+        // Check if user already has 2 reactions
+        if (userReactions.length >= 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You can only have up to 2 reactions per post'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Add new reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': reactionType,
+          'custom_emoji': null,
+        });
       }
 
       // Reload reactions
@@ -1275,7 +1288,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildReactionBar(String postId) {
     final reactions = _postReactions[postId] ?? {};
-    final userReaction = _userReactions[postId];
+    final userReactions = _userReactions[postId] ?? {};
 
     final reactionButtons = [
       {'type': 'like', 'emoji': '👍', 'label': 'Like'},
@@ -1298,22 +1311,26 @@ class _HomeScreenState extends State<HomeScreen> {
       totalReactions += count;
     }
 
-    // Get user's current reaction display
+    // Build display for user's reactions (can be up to 2)
     String userReactionDisplay = '👍';
     String userReactionLabel = 'React';
 
-    if (userReaction != null) {
-      if (userReaction.startsWith('custom_')) {
-        userReactionDisplay = userReaction.substring(7);
-        userReactionLabel = 'Reacted';
-      } else {
-        final selectedReaction = reactionButtons.firstWhere(
-          (r) => r['type'] == userReaction,
-          orElse: () => {'emoji': '👍', 'label': 'React'},
-        );
-        userReactionDisplay = selectedReaction['emoji'] as String;
-        userReactionLabel = 'Reacted';
+    if (userReactions.isNotEmpty) {
+      // Show the emojis of user's reactions
+      final emojis = <String>[];
+      for (var reaction in userReactions) {
+        if (reaction.startsWith('custom_')) {
+          emojis.add(reaction.substring(7));
+        } else {
+          final selectedReaction = reactionButtons.firstWhere(
+            (r) => r['type'] == reaction,
+            orElse: () => {'emoji': '👍'},
+          );
+          emojis.add(selectedReaction['emoji'] as String);
+        }
       }
+      userReactionDisplay = emojis.join(' ');
+      userReactionLabel = 'Reacted';
     }
 
     return Row(
@@ -1338,7 +1355,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final emoji = reaction['emoji'] as String;
               final label = reaction['label'] as String;
               final count = reactions[type] ?? 0;
-              final isSelected = userReaction == type;
+              final isSelected = userReactions.contains(type);
 
               return PopupMenuItem<String>(
                 value: type,
@@ -1390,7 +1407,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ...customReactions.map((emoji) {
               final customKey = 'custom_$emoji';
               final count = reactions[customKey] ?? 0;
-              final isSelected = userReaction == customKey;
+              final isSelected = userReactions.contains(customKey);
 
               return PopupMenuItem<String>(
                 value: customKey,
@@ -1453,14 +1470,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: userReaction != null
+              color: userReactions.isNotEmpty
                   ? Theme.of(context).primaryColor.withOpacity(0.2)
                   : Theme.of(context).cardColor,
               border: Border.all(
-                color: userReaction != null
+                color: userReactions.isNotEmpty
                     ? Theme.of(context).primaryColor
                     : Theme.of(context).dividerColor,
-                width: userReaction != null ? 2 : 1,
+                width: userReactions.isNotEmpty ? 2 : 1,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -1476,7 +1493,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   userReactionLabel,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: userReaction != null
+                        color: userReactions.isNotEmpty
                             ? Theme.of(context).primaryColor
                             : null,
                       ),
@@ -1485,7 +1502,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   Icons.arrow_drop_down,
                   size: 18,
-                  color: userReaction != null
+                  color: userReactions.isNotEmpty
                       ? Theme.of(context).primaryColor
                       : Colors.grey[600],
                 ),
@@ -1604,29 +1621,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
-      final currentReaction = _userReactions[postId];
+      final userReactions = _userReactions[postId] ?? {};
       final customKey = 'custom_$emoji';
 
-      // If clicking the same custom emoji, remove it
-      if (currentReaction == customKey) {
+      // Check if user already has this custom reaction
+      if (userReactions.contains(customKey)) {
+        // Remove this specific custom reaction
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('reaction_type', 'custom')
+            .eq('custom_emoji', emoji);
       } else {
-        // Use upsert to either insert or update the reaction
-        // This handles the unique constraint properly
-        await supabase.from('reactions').upsert(
-          {
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': 'custom',
-            'custom_emoji': emoji,
-          },
-          onConflict:
-              'post_id,user_id', // Specify the unique constraint columns
-        );
+        // Check if user already has 2 reactions
+        if (userReactions.length >= 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You can only have up to 2 reactions per post'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Add new custom reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': 'custom',
+          'custom_emoji': emoji,
+        });
       }
 
       // Reload reactions
