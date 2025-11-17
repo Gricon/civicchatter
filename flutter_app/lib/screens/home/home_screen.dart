@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import '../../widgets/custom_background.dart';
 import '../posts/post_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -414,283 +415,232 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: CivicChatterAppBar(
-        title: 'Home',
-        showBackButton: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // Responsive: constrain max width on large screens (web/tablet)
-          final isLargeScreen = constraints.maxWidth > 900;
-          final maxWidth = isLargeScreen ? 800.0 : double.infinity;
-          final horizontalPadding = isLargeScreen ? 24.0 : 16.0;
-
-          return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: 16.0,
+    return CustomBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: true,
+        appBar: CivicChatterAppBar(
+          title: 'Home',
+          showBackButton: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: _handleLogout,
+              tooltip: 'Logout',
             ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Card(
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Rich Text Editor Toolbar (Custom)
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children: [
-                                  _buildToolbarButton(Icons.format_bold, 'Bold',
-                                      () {
-                                    _quillController
-                                        ?.formatSelection(Attribute.bold);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_italic, 'Italic', () {
-                                    _quillController
-                                        ?.formatSelection(Attribute.italic);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_underlined, 'Underline', () {
-                                    _quillController
-                                        ?.formatSelection(Attribute.underline);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_strikethrough, 'Strike', () {
-                                    _quillController?.formatSelection(
-                                        Attribute.strikeThrough);
-                                  }),
-                                  const VerticalDivider(),
-                                  _buildToolbarButton(
-                                      Icons.format_align_left, 'Left', () {
-                                    _quillController?.formatSelection(
-                                        Attribute.leftAlignment);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_align_center, 'Center', () {
-                                    _quillController?.formatSelection(
-                                        Attribute.centerAlignment);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_align_right, 'Right', () {
-                                    _quillController?.formatSelection(
-                                        Attribute.rightAlignment);
-                                  }),
-                                  const VerticalDivider(),
-                                  _buildToolbarButton(
-                                      Icons.format_list_bulleted, 'Bullets',
-                                      () {
-                                    _quillController
-                                        ?.formatSelection(Attribute.ul);
-                                  }),
-                                  _buildToolbarButton(
-                                      Icons.format_list_numbered, 'Numbers',
-                                      () {
-                                    _quillController
-                                        ?.formatSelection(Attribute.ol);
-                                  }),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Rich Text Editor
-                            if (_quillController != null)
+          ],
+        ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive: constrain max width on large screens (web/tablet)
+            final isLargeScreen = constraints.maxWidth > 900;
+            final maxWidth = isLargeScreen ? 800.0 : double.infinity;
+            final horizontalPadding = isLargeScreen ? 24.0 : 16.0;
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 16.0,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Card(
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Rich Text Editor Toolbar (Custom)
                               Container(
-                                height: 200,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  children: [
+                                    _buildToolbarButton(
+                                        Icons.format_bold, 'Bold', () {
+                                      _quillController
+                                          ?.formatSelection(Attribute.bold);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_italic, 'Italic', () {
+                                      _quillController
+                                          ?.formatSelection(Attribute.italic);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_underlined, 'Underline',
+                                        () {
+                                      _quillController?.formatSelection(
+                                          Attribute.underline);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_strikethrough, 'Strike',
+                                        () {
+                                      _quillController?.formatSelection(
+                                          Attribute.strikeThrough);
+                                    }),
+                                    const VerticalDivider(),
+                                    _buildToolbarButton(
+                                        Icons.format_align_left, 'Left', () {
+                                      _quillController?.formatSelection(
+                                          Attribute.leftAlignment);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_align_center, 'Center',
+                                        () {
+                                      _quillController?.formatSelection(
+                                          Attribute.centerAlignment);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_align_right, 'Right', () {
+                                      _quillController?.formatSelection(
+                                          Attribute.rightAlignment);
+                                    }),
+                                    const VerticalDivider(),
+                                    _buildToolbarButton(
+                                        Icons.format_list_bulleted, 'Bullets',
+                                        () {
+                                      _quillController
+                                          ?.formatSelection(Attribute.ul);
+                                    }),
+                                    _buildToolbarButton(
+                                        Icons.format_list_numbered, 'Numbers',
+                                        () {
+                                      _quillController
+                                          ?.formatSelection(Attribute.ol);
+                                    }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Rich Text Editor
+                              if (_quillController != null)
+                                Container(
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: QuillEditor.basic(
+                                    controller: _quillController!,
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                              if (_selectedFile != null)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.green),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _getPostTypeIcon(_selectedPostType),
+                                        color: Colors.green,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Selected: ${_selectedFile!.name}',
+                                          style: const TextStyle(
+                                              color: Colors.green),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close, size: 20),
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedFile = null;
+                                          });
+                                        },
+                                        tooltip: 'Remove',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (_selectedFile != null)
+                                const SizedBox(height: 12),
+                              // Privacy Toggle
+                              Container(
                                 decoration: BoxDecoration(
                                   border: Border.all(
                                     color: Theme.of(context).dividerColor,
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: QuillEditor.basic(
-                                  controller: _quillController!,
-                                ),
-                              ),
-                            const SizedBox(height: 12),
-                            if (_selectedFile != null)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.green),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
-                                      _getPostTypeIcon(_selectedPostType),
-                                      color: Colors.green,
+                                      _isPrivatePost
+                                          ? Icons.lock
+                                          : Icons.public,
                                       size: 20,
+                                      color: _isPrivatePost
+                                          ? Colors.orange
+                                          : Colors.green,
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
-                                        'Selected: ${_selectedFile!.name}',
-                                        style: const TextStyle(
-                                            color: Colors.green),
-                                        overflow: TextOverflow.ellipsis,
+                                        _isPrivatePost
+                                            ? 'Private Post'
+                                            : 'Public Post',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close, size: 20),
-                                      onPressed: () {
+                                    Switch(
+                                      value: _isPrivatePost,
+                                      onChanged: (value) {
                                         setState(() {
-                                          _selectedFile = null;
+                                          _isPrivatePost = value;
                                         });
                                       },
-                                      tooltip: 'Remove',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                      activeColor: Colors.orange,
                                     ),
                                   ],
                                 ),
                               ),
-                            if (_selectedFile != null)
                               const SizedBox(height: 12),
-                            // Privacy Toggle
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _isPrivatePost ? Icons.lock : Icons.public,
-                                    size: 20,
-                                    color: _isPrivatePost
-                                        ? Colors.orange
-                                        : Colors.green,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      _isPrivatePost
-                                          ? 'Private Post'
-                                          : 'Public Post',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: _isPrivatePost,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _isPrivatePost = value;
-                                      });
-                                    },
-                                    activeColor: Colors.orange,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // Responsive button layout
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final isSmallScreen =
-                                    constraints.maxWidth < 500;
+                              // Responsive button layout
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isSmallScreen =
+                                      constraints.maxWidth < 500;
 
-                                if (isSmallScreen) {
-                                  // Stack vertically on mobile
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedPostType,
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 14,
-                                          ),
-                                          prefixIcon: Icon(
-                                            _getPostTypeIcon(_selectedPostType),
-                                            size: 20,
-                                          ),
-                                        ),
-                                        items: _buildDropdownItems(),
-                                        onChanged: _handlePostTypeChange,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      SizedBox(
-                                        height: 48,
-                                        child: ElevatedButton(
-                                          onPressed: _submitPost,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                Theme.of(context).brightness ==
-                                                        Brightness.dark
-                                                    ? const Color(0xFF3B82F6)
-                                                    : Theme.of(context)
-                                                        .colorScheme
-                                                        .primary,
-                                            foregroundColor: Colors.white,
-                                            elevation: 4,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Submit',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                } else {
-                                  // Row layout on larger screens
-                                  return Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: DropdownButtonFormField<String>(
+                                  if (isSmallScreen) {
+                                    // Stack vertically on mobile
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        DropdownButtonFormField<String>(
                                           value: _selectedPostType,
                                           decoration: InputDecoration(
                                             border: OutlineInputBorder(
@@ -711,249 +661,319 @@ class _HomeScreenState extends State<HomeScreen> {
                                           items: _buildDropdownItems(),
                                           onChanged: _handlePostTypeChange,
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 1,
-                                        child: ElevatedButton(
-                                          onPressed: _submitPost,
-                                          style: ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            backgroundColor:
-                                                Theme.of(context).brightness ==
-                                                        Brightness.dark
-                                                    ? const Color(0xFF3B82F6)
-                                                    : Theme.of(context)
-                                                        .colorScheme
-                                                        .primary,
-                                            foregroundColor: Colors.white,
-                                            elevation: 4,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          height: 48,
+                                          child: ElevatedButton(
+                                            onPressed: _submitPost,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Theme.of(context)
+                                                          .brightness ==
+                                                      Brightness.dark
+                                                  ? const Color(0xFF3B82F6)
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                              foregroundColor: Colors.white,
+                                              elevation: 4,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
                                             ),
-                                          ),
-                                          child: const Text(
-                                            'Submit',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.white,
+                                            child: const Text(
+                                              'Submit',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Posts List
-                    if (_isLoadingPosts)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                    else if (_posts.isEmpty)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.feed,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No posts yet',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Create your first post to get started!',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
+                                      ],
+                                    );
+                                  } else {
+                                    // Row layout on larger screens
+                                    return Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            value: _selectedPostType,
+                                            decoration: InputDecoration(
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 14,
+                                              ),
+                                              prefixIcon: Icon(
+                                                _getPostTypeIcon(
+                                                    _selectedPostType),
+                                                size: 20,
+                                              ),
+                                            ),
+                                            items: _buildDropdownItems(),
+                                            onChanged: _handlePostTypeChange,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 1,
+                                          child: ElevatedButton(
+                                            onPressed: _submitPost,
+                                            style: ElevatedButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 16),
+                                              backgroundColor: Theme.of(context)
+                                                          .brightness ==
+                                                      Brightness.dark
+                                                  ? const Color(0xFF3B82F6)
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                              foregroundColor: Colors.white,
+                                              elevation: 4,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Submit',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                },
                               ),
                             ],
                           ),
                         ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _posts.length,
-                        itemBuilder: (context, index) {
-                          final post = _posts[index];
-                          final profile = post['profiles'];
-                          final displayName = profile != null
-                              ? (profile['display_name'] ??
-                                  profile['handle'] ??
-                                  'Unknown User')
-                              : 'Unknown User';
-                          final createdAt = DateTime.parse(post['created_at']);
-                          final timestamp = _formatTimestamp(createdAt);
-                          final isPrivate = post['is_private'] ?? false;
+                      ),
+                      const SizedBox(height: 24),
+                      // Posts List
+                      if (_isLoadingPosts)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_posts.isEmpty)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.feed,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No posts yet',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Create your first post to get started!',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Colors.grey[600],
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _posts.length,
+                          itemBuilder: (context, index) {
+                            final post = _posts[index];
+                            final profile = post['profiles'];
+                            final displayName = profile != null
+                                ? (profile['display_name'] ??
+                                    profile['handle'] ??
+                                    'Unknown User')
+                                : 'Unknown User';
+                            final createdAt =
+                                DateTime.parse(post['created_at']);
+                            final timestamp = _formatTimestamp(createdAt);
+                            final isPrivate = post['is_private'] ?? false;
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        PostDetailScreen(post: post),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundImage: profile != null &&
-                                                  profile['avatar_url'] != null
-                                              ? NetworkImage(
-                                                  profile['avatar_url'])
-                                              : null,
-                                          child: profile == null ||
-                                                  profile['avatar_url'] == null
-                                              ? Text(
-                                                  displayName[0].toUpperCase())
-                                              : null,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          PostDetailScreen(post: post),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundImage: profile != null &&
+                                                    profile['avatar_url'] !=
+                                                        null
+                                                ? NetworkImage(
+                                                    profile['avatar_url'])
+                                                : null,
+                                            child: profile == null ||
+                                                    profile['avatar_url'] ==
+                                                        null
+                                                ? Text(displayName[0]
+                                                    .toUpperCase())
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  displayName,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                                Text(
+                                                  timestamp,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Column(
                                             crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                                CrossAxisAlignment.end,
                                             children: [
-                                              Text(
-                                                displayName,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                              if (post['media_type'] != null)
+                                                Chip(
+                                                  label:
+                                                      Text(post['media_type']),
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                              const SizedBox(height: 4),
+                                              Chip(
+                                                label: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      isPrivate
+                                                          ? Icons.lock
+                                                          : Icons.public,
+                                                      size: 16,
                                                     ),
-                                              ),
-                                              Text(
-                                                timestamp,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color: Colors.grey[600],
-                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(isPrivate
+                                                        ? 'Private'
+                                                        : 'Public'),
+                                                  ],
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                backgroundColor: isPrivate
+                                                    ? Colors.orange[100]
+                                                    : Colors.green[100],
                                               ),
                                             ],
                                           ),
-                                        ),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          children: [
-                                            if (post['media_type'] != null)
-                                              Chip(
-                                                label: Text(post['media_type']),
-                                                padding: EdgeInsets.zero,
-                                              ),
-                                            const SizedBox(height: 4),
-                                            Chip(
-                                              label: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    isPrivate
-                                                        ? Icons.lock
-                                                        : Icons.public,
-                                                    size: 16,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(isPrivate
-                                                      ? 'Private'
-                                                      : 'Public'),
-                                                ],
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              backgroundColor: isPrivate
-                                                  ? Colors.orange[100]
-                                                  : Colors.green[100],
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      post['content'] ?? '',
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.comment_outlined,
-                                          size: 16,
-                                          color: Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'View comments',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Colors.grey[600],
-                                              ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        post['content'] ?? '',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.comment_outlined,
+                                            size: 16,
+                                            color: Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'View comments',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: Colors.grey[600],
+                                                ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                  ],
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
+      ), // Close CustomBackground
     );
   }
 
