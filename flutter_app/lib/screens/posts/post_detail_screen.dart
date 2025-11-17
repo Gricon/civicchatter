@@ -81,10 +81,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final userId = supabase.auth.currentUser?.id;
       final postId = widget.post['id'];
 
-      // Load all reactions for this post
+      // Load all reactions for this post (including custom_emoji)
       final reactionsResponse = await supabase
           .from('reactions')
-          .select('reaction_type, user_id')
+          .select('reaction_type, custom_emoji, user_id')
           .eq('post_id', postId);
 
       // Process reactions
@@ -93,14 +93,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       for (var reaction in reactionsResponse) {
         final reactionType = reaction['reaction_type'];
+        final customEmoji = reaction['custom_emoji'];
         final reactionUserId = reaction['user_id'];
 
+        // Use custom emoji as the type if it's a custom reaction
+        final effectiveType = reactionType == 'custom' && customEmoji != null
+            ? 'custom_$customEmoji'
+            : reactionType;
+
         // Count reactions
-        reactionCounts[reactionType] = (reactionCounts[reactionType] ?? 0) + 1;
+        reactionCounts[effectiveType] =
+            (reactionCounts[effectiveType] ?? 0) + 1;
 
         // Track user's own reaction
         if (userId != null && reactionUserId == userId) {
-          userReaction = reactionType;
+          userReaction = effectiveType;
         }
       }
 
@@ -543,56 +550,274 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       {'type': 'angry', 'emoji': '😠', 'label': 'Angry'},
     ];
 
+    // Collect custom reactions for this post
+    final customReactions = _reactions.keys
+        .where((key) => key.startsWith('custom_'))
+        .map((key) => key.substring(7)) // Remove 'custom_' prefix
+        .toList();
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: reactionButtons.map((reaction) {
-        final type = reaction['type'] as String;
-        final emoji = reaction['emoji'] as String;
-        final count = _reactions[type] ?? 0;
-        final isSelected = _userReaction == type;
+      children: [
+        // Standard reaction buttons
+        ...reactionButtons.map((reaction) {
+          final type = reaction['type'] as String;
+          final emoji = reaction['emoji'] as String;
+          final count = _reactions[type] ?? 0;
+          final isSelected = _userReaction == type;
 
-        return InkWell(
-          onTap: () => _toggleReaction(type),
+          return InkWell(
+            onTap: () => _toggleReaction(type),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Theme.of(context).primaryColor.withOpacity(0.2)
+                    : Theme.of(context).cardColor,
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).dividerColor,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      count.toString(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+
+        // Custom reaction buttons (show ones that have been used)
+        ...customReactions.map((emoji) {
+          final customKey = 'custom_$emoji';
+          final count = _reactions[customKey] ?? 0;
+          final isSelected = _userReaction == customKey;
+
+          return InkWell(
+            onTap: () => _toggleCustomReaction(emoji),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Theme.of(context).primaryColor.withOpacity(0.2)
+                    : Theme.of(context).cardColor,
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).dividerColor,
+                  width: isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      count.toString(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+
+        // Add custom reaction button
+        InkWell(
+          onTap: _showCustomReactionPicker,
           borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Theme.of(context).primaryColor.withOpacity(0.2)
-                  : Theme.of(context).cardColor,
+              color: Theme.of(context).cardColor,
               border: Border.all(
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : Theme.of(context).dividerColor,
-                width: isSelected ? 2 : 1,
+                color: Theme.of(context).primaryColor,
+                width: 1,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  emoji,
-                  style: const TextStyle(fontSize: 18),
+                Icon(
+                  Icons.add_reaction_outlined,
+                  size: 18,
+                  color: Theme.of(context).primaryColor,
                 ),
-                if (count > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    count.toString(),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? Theme.of(context).primaryColor
-                              : null,
-                        ),
-                  ),
-                ],
+                const SizedBox(width: 4),
+                Text(
+                  'Custom',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
               ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ],
     );
+  }
+
+  void _showCustomReactionPicker() {
+    final TextEditingController emojiController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Custom Reaction'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter any emoji:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emojiController,
+              decoration: const InputDecoration(
+                hintText: 'Type or paste emoji (e.g., 🎉, 🔥, 💯)',
+                border: OutlineInputBorder(),
+              ),
+              style: const TextStyle(fontSize: 24),
+              textAlign: TextAlign.center,
+              maxLength: 10,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Popular emojis:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                '🎉',
+                '🔥',
+                '💯',
+                '✨',
+                '🚀',
+                '💪',
+                '🙌',
+                '👏',
+                '🤔',
+                '🎯',
+                '⭐',
+                '💎',
+                '🌟',
+                '🎊',
+                '🏆',
+                '❓',
+                '💡',
+                '🎈',
+              ]
+                  .map((emoji) => InkWell(
+                        onTap: () {
+                          emojiController.text = emoji;
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child:
+                              Text(emoji, style: const TextStyle(fontSize: 24)),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final emoji = emojiController.text.trim();
+              if (emoji.isNotEmpty) {
+                Navigator.pop(context);
+                _toggleCustomReaction(emoji);
+              }
+            },
+            child: const Text('Add Reaction'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleCustomReaction(String emoji) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      final postId = widget.post['id'];
+
+      if (userId == null) return;
+
+      // If user already has a reaction, remove it first
+      if (_userReaction != null) {
+        await supabase
+            .from('reactions')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      }
+
+      // Add custom reaction
+      await supabase.from('reactions').insert({
+        'post_id': postId,
+        'user_id': userId,
+        'reaction_type': 'custom',
+        'custom_emoji': emoji,
+      });
+
+      // Reload reactions
+      await _loadReactions();
+    } catch (e) {
+      debugPrint('Error toggling custom reaction: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating reaction: $e')),
+        );
+      }
+    }
   }
 }
