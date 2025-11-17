@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import '../../widgets/report_block_dialog.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Map<String, dynamic> post;
@@ -22,6 +23,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _isSubmitting = false;
   Map<String, int> _reactions = {}; // reactionType -> count
   Set<String> _userReactions = {}; // user's current reactions (up to 2)
+  String? _replyingToCommentId; // Track which comment is being replied to
+  String? _replyingToUsername; // Track username being replied to
 
   @override
   void initState() {
@@ -197,9 +200,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         'post_id': postId,
         'user_id': userId,
         'content': commentText,
+        if (_replyingToCommentId != null) 'parent_comment_id': _replyingToCommentId,
       });
 
       _commentController.clear();
+      setState(() {
+        _replyingToCommentId = null;
+        _replyingToUsername = null;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -479,6 +487,45 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   comment['content'] ?? '',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
+                                const SizedBox(height: 8),
+                                // Reply and Report/Block buttons
+                                Row(
+                                  children: [
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.reply, size: 16),
+                                      label: const Text('Reply'),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        minimumSize: const Size(0, 32),
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _replyingToCommentId = comment['id'];
+                                          _replyingToUsername = displayName;
+                                        });
+                                        _commentController.text = '@$displayName ';
+                                      },
+                                    ),
+                                    const Spacer(),
+                                    if (comment['user_id'] != Supabase.instance.client.auth.currentUser?.id)
+                                      IconButton(
+                                        icon: const Icon(Icons.more_vert, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => ReportBlockDialog(
+                                              reportedUserId: comment['user_id'],
+                                              reportedUsername: displayName,
+                                              postId: widget.post['id'],
+                                              commentId: comment['id'],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
@@ -504,41 +551,80 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      decoration: const InputDecoration(
-                        hintText: 'Write a comment...',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                  // Reply indicator
+                  if (_replyingToUsername != null)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.reply, size: 16, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Replying to $_replyingToUsername',
+                              style: const TextStyle(color: Colors.blue),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 16),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() {
+                                _replyingToCommentId = null;
+                                _replyingToUsername = null;
+                                _commentController.clear();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          decoration: const InputDecoration(
+                            hintText: 'Write a comment...',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _submitComment(),
                         ),
                       ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _submitComment(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _isSubmitting ? null : _submitComment,
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
-                    style: IconButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF3B82F6)
-                              : const Color(0xFF002868),
-                      foregroundColor: Colors.white,
-                    ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _isSubmitting ? null : _submitComment,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send),
+                        style: IconButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF3B82F6)
+                                  : const Color(0xFF002868),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
