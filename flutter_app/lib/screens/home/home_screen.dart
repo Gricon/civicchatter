@@ -273,44 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: 'Home',
         showBackButton: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Public',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: _showPrivatePosts
-                            ? FontWeight.normal
-                            : FontWeight.bold,
-                        color: _showPrivatePosts
-                            ? Theme.of(context).textTheme.bodyMedium?.color
-                            : Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-                Switch(
-                  value: _showPrivatePosts,
-                  onChanged: (value) {
-                    setState(() {
-                      _showPrivatePosts = value;
-                    });
-                  },
-                ),
-                Text(
-                  'Private',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: _showPrivatePosts
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: _showPrivatePosts
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                ),
-              ],
-            ),
-          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _handleLogout,
@@ -344,6 +306,69 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Public/Private Toggle
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Public',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: _showPrivatePosts
+                                        ? FontWeight.normal
+                                        : FontWeight.bold,
+                                    color: _showPrivatePosts
+                                        ? Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color
+                                        : Theme.of(context).colorScheme.primary,
+                                  ),
+                            ),
+                            Switch(
+                              value: _showPrivatePosts,
+                              onChanged: (value) {
+                                setState(() {
+                                  _showPrivatePosts = value;
+                                });
+                              },
+                            ),
+                            Text(
+                              'Private',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: _showPrivatePosts
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _showPrivatePosts
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.color,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (user != null)
