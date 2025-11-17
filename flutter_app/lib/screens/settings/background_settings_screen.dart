@@ -187,21 +187,34 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
         );
         break;
       case 'image':
-        preview = _backgroundImagePath != null
-            ? Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(_backgroundImagePath!),
-                    fit: BoxFit.cover,
-                  ),
+        if (_backgroundImagePath != null && _backgroundImagePath!.isNotEmpty) {
+          try {
+            // Decode base64 image for preview
+            final bytes = base64Decode(_backgroundImagePath!);
+            preview = Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: MemoryImage(bytes),
+                  fit: BoxFit.cover,
                 ),
-              )
-            : Container(
-                color: Colors.grey[300],
-                child: const Center(
-                  child: Text('No image selected'),
-                ),
-              );
+              ),
+            );
+          } catch (e) {
+            preview = Container(
+              color: Colors.grey[300],
+              child: Center(
+                child: Text('Error loading image: $e'),
+              ),
+            );
+          }
+        } else {
+          preview = Container(
+            color: Colors.grey[300],
+            child: const Center(
+              child: Text('No image selected'),
+            ),
+          );
+        }
         break;
       default:
         preview = Container(color: _solidColor);

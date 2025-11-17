@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import '../../widgets/custom_background.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -68,39 +69,42 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CivicChatterAppBar(
-        title: 'Friends',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add),
-            onPressed: _showInviteDialog,
-            tooltip: 'Invite Friends',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'All Friends'),
-              Tab(text: 'Requests'),
-              Tab(text: 'Invite'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
+    return CustomBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: CivicChatterAppBar(
+          title: 'Friends',
+          showBackButton: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              onPressed: _showInviteDialog,
+              tooltip: 'Invite Friends',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            TabBar(
               controller: _tabController,
-              children: [
-                _buildFriendsList(),
-                _buildRequestsList(),
-                _buildInviteTab(),
+              tabs: const [
+                Tab(text: 'All Friends'),
+                Tab(text: 'Requests'),
+                Tab(text: 'Invite'),
               ],
             ),
-          ),
-        ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildFriendsList(),
+                  _buildRequestsList(),
+                  _buildInviteTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

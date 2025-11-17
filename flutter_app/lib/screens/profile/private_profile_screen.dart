@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import '../../widgets/custom_background.dart';
 
 class PrivateProfileScreen extends StatefulWidget {
   const PrivateProfileScreen({super.key});
@@ -48,50 +49,53 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CivicChatterAppBar(
-        title: 'My Profile',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => context.push('/settings/edit-profile'),
-            tooltip: 'Edit Profile',
-          ),
-        ],
+    return CustomBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: CivicChatterAppBar(
+          title: 'My Profile',
+          showBackButton: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => context.push('/settings/edit-profile'),
+              tooltip: 'Edit Profile',
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Failed to load profile',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loadProfile,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _buildProfileContent(),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Failed to load profile',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _loadProfile,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : _buildProfileContent(),
     );
   }
 
@@ -244,7 +248,7 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
             ),
           ),
         ],
-      ),
+      ), // This closes CustomBackground child parameter (Scaffold's body)
     );
   }
 }
