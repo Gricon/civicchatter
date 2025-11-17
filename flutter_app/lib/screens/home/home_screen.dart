@@ -841,15 +841,13 @@ class _HomeScreenState extends State<HomeScreen> {
             // Responsive: constrain max width on large screens (web/tablet)
             final isLargeScreen = constraints.maxWidth > 900;
             final showMessageCenter = constraints.maxWidth > 1000;
-            final maxWidth =
-                isLargeScreen && !showMessageCenter ? 800.0 : double.infinity;
+            final maxWidth = isLargeScreen ? 800.0 : double.infinity;
             final horizontalPadding = isLargeScreen ? 24.0 : 16.0;
 
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: showMessageCenter ? 82 : 100,
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
                       horizontal: horizontalPadding,
@@ -1785,9 +1783,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 if (showMessageCenter)
-                  Expanded(
-                    flex: 18,
-                    child: const MessageCenter(),
+                  const SizedBox(
+                    width: 300,
+                    child: MessageCenter(),
                   ),
               ],
             );
