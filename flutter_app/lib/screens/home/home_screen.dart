@@ -878,6 +878,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, constraints) {
             // Responsive: constrain max width on large screens (web/tablet)
             final maxWidth = 800.0;
+            final showToolsPanel = constraints.maxWidth > 1200;
 
             return Stack(
               children: [
@@ -1782,6 +1783,195 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                // Left side tools panel
+                if (showToolsPanel)
+                  Positioned(
+                    left: 20,
+                    top: 20,
+                    child: SizedBox(
+                      width: 280,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Groups Tool
+                          Card(
+                            elevation: 2,
+                            child: InkWell(
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Groups feature coming soon!'),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.groups,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          size: 28,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          'Groups',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Join and create community groups',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Activity Planner Tool
+                          Card(
+                            elevation: 2,
+                            child: InkWell(
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Activity Planner coming soon!'),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.event,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          size: 28,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          'Activity Planner',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Plan and organize community events',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // PSA Box
+                          Card(
+                            elevation: 2,
+                            color: Colors.amber[50],
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.campaign,
+                                        color: Colors.orange[700],
+                                        size: 28,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'PSA',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Public Service Announcements',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange[900],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Stay informed about important community updates and announcements.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content:
+                                              Text('PSA feature coming soon!'),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange[700],
+                                      foregroundColor: Colors.white,
+                                      minimumSize:
+                                          const Size(double.infinity, 36),
+                                    ),
+                                    child: const Text('View Announcements'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 // Notifications dropdown overlay
                 if (_showNotificationsDropdown)
                   Positioned(
