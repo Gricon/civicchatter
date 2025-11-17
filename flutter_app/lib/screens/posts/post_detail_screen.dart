@@ -138,24 +138,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             .eq('post_id', postId)
             .eq('user_id', userId);
       } else {
-        // Delete existing reaction first if any, then insert new one
-        // This avoids update issues with custom_emoji field
-        if (_userReaction != null) {
-          await supabase
-              .from('reactions')
-              .delete()
-              .eq('post_id', postId)
-              .eq('user_id', userId);
-        }
-
-        // Insert new reaction
-        await supabase.from('reactions').insert({
-          'post_id': postId,
-          'user_id': userId,
-          'reaction_type': reactionType,
-          'custom_emoji':
-              null, // Ensure custom_emoji is null for standard reactions
-        });
+        // Use upsert to either insert or update the reaction
+        // This handles the unique constraint properly
+        await supabase.from('reactions').upsert(
+          {
+            'post_id': postId,
+            'user_id': userId,
+            'reaction_type': reactionType,
+            'custom_emoji':
+                null, // Ensure custom_emoji is null for standard reactions
+          },
+          onConflict:
+              'post_id,user_id', // Specify the unique constraint columns
+        );
       }
 
       // Reload reactions
@@ -884,22 +879,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             .eq('post_id', postId)
             .eq('user_id', userId);
       } else {
-        // Delete existing reaction first if any
-        if (_userReaction != null) {
-          await supabase
-              .from('reactions')
-              .delete()
-              .eq('post_id', postId)
-              .eq('user_id', userId);
-        }
-
-        // Insert new custom reaction
-        await supabase.from('reactions').insert({
-          'post_id': postId,
-          'user_id': userId,
-          'reaction_type': 'custom',
-          'custom_emoji': emoji,
-        });
+        // Use upsert to either insert or update the reaction
+        // This handles the unique constraint properly
+        await supabase.from('reactions').upsert(
+          {
+            'post_id': postId,
+            'user_id': userId,
+            'reaction_type': 'custom',
+            'custom_emoji': emoji,
+          },
+          onConflict:
+              'post_id,user_id', // Specify the unique constraint columns
+        );
       }
 
       // Reload reactions
