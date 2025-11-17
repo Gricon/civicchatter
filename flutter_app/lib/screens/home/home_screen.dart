@@ -264,9 +264,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.user;
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: CivicChatterAppBar(
@@ -351,28 +348,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      _showPrivatePosts ? 'Private Posts' : 'Public Posts',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    if (user != null)
-                      Text(
-                        _showPrivatePosts
-                            ? 'Posts visible only to your friends'
-                            : 'Posts visible to everyone',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: _showPrivatePosts
-                                  ? Colors.orange
-                                  : Colors.green,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    const SizedBox(height: 24),
                     Card(
                       elevation: 2,
                       child: Padding(
