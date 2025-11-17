@@ -664,9 +664,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                         child: ElevatedButton(
                                           onPressed: _submitPost,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                            backgroundColor:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF3B82F6)
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
                                             foregroundColor: Colors.white,
                                             elevation: 4,
                                             shape: RoundedRectangleBorder(
@@ -722,9 +726,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           style: ElevatedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 16),
-                                            backgroundColor: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                            backgroundColor:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? const Color(0xFF3B82F6)
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
                                             foregroundColor: Colors.white,
                                             elevation: 4,
                                             shape: RoundedRectangleBorder(

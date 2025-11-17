@@ -196,13 +196,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               if (snapshot.hasData) {
                                 return CircleAvatar(
                                   radius: 60,
-                                  backgroundColor: Colors.grey[300],
+                                  backgroundColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF374151)
+                                          : Colors.grey[300],
                                   backgroundImage: MemoryImage(snapshot.data!),
                                 );
                               }
                               return CircleAvatar(
                                 radius: 60,
-                                backgroundColor: Colors.grey[300],
+                                backgroundColor: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? const Color(0xFF374151)
+                                    : Colors.grey[300],
                                 child: const CircularProgressIndicator(),
                               );
                             },
@@ -210,7 +217,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         : CircleAvatar(
                             radius: 60,
                             backgroundColor:
-                                const Color.fromARGB(255, 151, 65, 65),
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF374151)
+                                    : Colors.grey[300],
                             backgroundImage: _avatarUrl != null
                                 ? NetworkImage(_avatarUrl!) as ImageProvider
                                 : null,

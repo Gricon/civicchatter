@@ -427,7 +427,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           )
                         : const Icon(Icons.send),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF002868),
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFF002868),
                       foregroundColor: Colors.white,
                     ),
                   ),

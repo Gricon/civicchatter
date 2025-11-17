@@ -79,7 +79,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       // Avatar
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF374151)
+                                : Colors.grey[300],
                         backgroundImage: _profile!['avatar_url'] != null
                             ? CachedNetworkImageProvider(
                                 _profile!['avatar_url'])

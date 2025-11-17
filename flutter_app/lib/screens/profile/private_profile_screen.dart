@@ -122,7 +122,10 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 60,
-                  backgroundColor: Colors.grey[300],
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF374151)
+                          : Colors.grey[300],
                   backgroundImage: avatarUrl != null
                       ? CachedNetworkImageProvider(avatarUrl)
                       : null,
