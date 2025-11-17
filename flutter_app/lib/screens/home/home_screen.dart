@@ -20,11 +20,14 @@ class _HomeScreenState extends State<HomeScreen> {
   QuillController? _quillController;
   XFile? _selectedFile;
   final ImagePicker _picker = ImagePicker();
+  List<Map<String, dynamic>> _posts = [];
+  bool _isLoadingPosts = false;
 
   @override
   void initState() {
     super.initState();
     _initializeController();
+    _loadPosts();
   }
 
   void _initializeController() {
@@ -32,6 +35,35 @@ class _HomeScreenState extends State<HomeScreen> {
       _quillController = QuillController.basic();
     } catch (e) {
       debugPrint('Error initializing QuillController: $e');
+    }
+  }
+
+  Future<void> _loadPosts() async {
+    setState(() {
+      _isLoadingPosts = true;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('posts')
+          .select('*, profiles(username, display_name)')
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      if (mounted) {
+        setState(() {
+          _posts = List<Map<String, dynamic>>.from(response);
+          _isLoadingPosts = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading posts: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPosts = false;
+        });
+      }
     }
   }
 
@@ -194,6 +226,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _quillController?.clear();
         _selectedFile = null;
       });
+
+      // Reload posts to show the new one
+      _loadPosts();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -660,36 +695,119 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.feed,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No posts yet',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Create your first post to get started!',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                    // Posts List
+                    if (_isLoadingPosts)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(),
                         ),
+                      )
+                    else if (_posts.isEmpty)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.feed,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No posts yet',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Create your first post to get started!',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _posts.length,
+                        itemBuilder: (context, index) {
+                          final post = _posts[index];
+                          final profile = post['profiles'];
+                          final displayName = profile != null
+                              ? (profile['display_name'] ??
+                                  profile['username'] ??
+                                  'Unknown User')
+                              : 'Unknown User';
+                          final createdAt = DateTime.parse(post['created_at']);
+                          final timeAgo = _getTimeAgo(createdAt);
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        child:
+                                            Text(displayName[0].toUpperCase()),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              displayName,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                            Text(
+                                              timeAgo,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (post['media_type'] != null)
+                                        Chip(
+                                          label: Text(post['media_type']),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    post['content'] ?? '',
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -698,5 +816,26 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 365) {
+      final years = (difference.inDays / 365).floor();
+      return '$years ${years == 1 ? 'year' : 'years'} ago';
+    } else if (difference.inDays > 30) {
+      final months = (difference.inDays / 30).floor();
+      return '$months ${months == 1 ? 'month' : 'months'} ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 }
