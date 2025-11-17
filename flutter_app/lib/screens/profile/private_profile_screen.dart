@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 import '../../widgets/custom_background.dart';
+import '../../widgets/app_drawer.dart';
 
 class PrivateProfileScreen extends StatefulWidget {
   const PrivateProfileScreen({super.key});
@@ -49,6 +50,8 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return CustomBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -63,6 +66,7 @@ class _PrivateProfileScreenState extends State<PrivateProfileScreen> {
             ),
           ],
         ),
+        drawer: isMobile ? const AppDrawer() : null,
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null

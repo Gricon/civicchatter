@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 import '../../widgets/custom_background.dart';
+import '../../widgets/app_drawer.dart';
 
 class DebatesScreen extends StatefulWidget {
   const DebatesScreen({super.key});
@@ -12,6 +13,8 @@ class DebatesScreen extends StatefulWidget {
 class _DebatesScreenState extends State<DebatesScreen> {
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return CustomBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -19,6 +22,7 @@ class _DebatesScreenState extends State<DebatesScreen> {
           title: 'Debates',
           showBackButton: false,
         ),
+        drawer: isMobile ? const AppDrawer() : null,
         body: Center(
           child: SingleChildScrollView(
             child: Padding(
