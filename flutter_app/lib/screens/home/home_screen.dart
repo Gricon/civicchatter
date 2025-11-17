@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 import '../../widgets/custom_background.dart';
@@ -256,6 +258,267 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _quillController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePostAction(
+      String action, Map<String, dynamic> post) async {
+    final supabase = Supabase.instance.client;
+    final currentUserId = supabase.auth.currentUser?.id;
+
+    switch (action) {
+      case 'share':
+        // Use the share_plus package
+        final postUrl = 'https://civicchatter.netlify.app/#/post/${post['id']}';
+        try {
+          await Share.share(
+            'Check out this post on Civic Chatter: ${post['content']?.substring(0, 100) ?? ''}\n\n$postUrl',
+            subject: 'Civic Chatter Post',
+          );
+        } catch (e) {
+          debugPrint('Error sharing: $e');
+        }
+        break;
+
+      case 'copy_link':
+        final postUrl = 'https://civicchatter.netlify.app/#/post/${post['id']}';
+        await Clipboard.setData(ClipboardData(text: postUrl));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Link copied to clipboard'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        break;
+
+      case 'report':
+        if (mounted) {
+          _showReportDialog(post);
+        }
+        break;
+
+      case 'edit':
+        if (post['user_id'] == currentUserId) {
+          if (mounted) {
+            _showEditDialog(post);
+          }
+        }
+        break;
+
+      case 'delete':
+        if (post['user_id'] == currentUserId) {
+          if (mounted) {
+            _showDeleteConfirmation(post);
+          }
+        }
+        break;
+    }
+  }
+
+  void _showReportDialog(Map<String, dynamic> post) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Why are you reporting this post?'),
+            const SizedBox(height: 16),
+            ListTile(
+              title: const Text('Spam'),
+              onTap: () {
+                Navigator.pop(context);
+                _submitReport(post['id'], 'spam');
+              },
+            ),
+            ListTile(
+              title: const Text('Harassment'),
+              onTap: () {
+                Navigator.pop(context);
+                _submitReport(post['id'], 'harassment');
+              },
+            ),
+            ListTile(
+              title: const Text('Misinformation'),
+              onTap: () {
+                Navigator.pop(context);
+                _submitReport(post['id'], 'misinformation');
+              },
+            ),
+            ListTile(
+              title: const Text('Other'),
+              onTap: () {
+                Navigator.pop(context);
+                _submitReport(post['id'], 'other');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitReport(String postId, String reason) async {
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase.from('reports').insert({
+        'post_id': postId,
+        'user_id': supabase.auth.currentUser?.id,
+        'reason': reason,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Report submitted. Thank you for helping keep our community safe.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error submitting report: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to submit report. Please try again.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditDialog(Map<String, dynamic> post) {
+    final controller = TextEditingController(text: post['content']);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Post'),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: 'Edit your post...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updatePost(post['id'], controller.text);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updatePost(String postId, String newContent) async {
+    if (newContent.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post content cannot be empty')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase
+          .from('posts')
+          .update({'content': newContent.trim()}).eq('id', postId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post updated successfully')),
+        );
+      }
+
+      await _loadPosts();
+    } catch (e) {
+      debugPrint('Error updating post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update post: $e')),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation(Map<String, dynamic> post) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text(
+            'Are you sure you want to delete this post? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deletePost(post['id']);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deletePost(String postId) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Delete reactions first
+      await supabase.from('reactions').delete().eq('post_id', postId);
+
+      // Delete comments
+      await supabase.from('comments').delete().eq('post_id', postId);
+
+      // Delete the post
+      await supabase.from('posts').delete().eq('id', postId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post deleted successfully')),
+        );
+      }
+
+      await _loadPosts();
+    } catch (e) {
+      debugPrint('Error deleting post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete post: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _pickImage() async {
@@ -1175,42 +1438,124 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ],
                                             ),
                                           ),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
+                                          Row(
                                             children: [
-                                              if (post['media_type'] != null)
-                                                Chip(
-                                                  label:
-                                                      Text(post['media_type']),
-                                                  padding: EdgeInsets.zero,
-                                                ),
-                                              const SizedBox(height: 4),
-                                              Chip(
-                                                label: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      isPrivate
-                                                          ? Icons.lock
-                                                          : Icons.public,
-                                                      size: 16,
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  if (post['media_type'] !=
+                                                      null)
+                                                    Chip(
+                                                      label: Text(
+                                                          post['media_type']),
+                                                      padding: EdgeInsets.zero,
                                                     ),
-                                                    const SizedBox(width: 4),
-                                                    Text(isPrivate
-                                                        ? 'Private'
-                                                        : 'Public'),
+                                                  const SizedBox(height: 4),
+                                                  Chip(
+                                                    label: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          isPrivate
+                                                              ? Icons.lock
+                                                              : Icons.public,
+                                                          size: 16,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        Text(isPrivate
+                                                            ? 'Private'
+                                                            : 'Public'),
+                                                      ],
+                                                    ),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                    backgroundColor: isPrivate
+                                                        ? Colors.orange[100]
+                                                        : Colors.green[100],
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(width: 8),
+                                              PopupMenuButton<String>(
+                                                icon: Icon(
+                                                  Icons.more_vert,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                onSelected: (value) =>
+                                                    _handlePostAction(
+                                                        value, post),
+                                                itemBuilder: (context) => [
+                                                  const PopupMenuItem(
+                                                    value: 'share',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.share),
+                                                        SizedBox(width: 12),
+                                                        Text('Share'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'copy_link',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.link),
+                                                        SizedBox(width: 12),
+                                                        Text('Copy Link'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'report',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.flag),
+                                                        SizedBox(width: 12),
+                                                        Text('Report'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (post['user_id'] ==
+                                                      Supabase
+                                                          .instance
+                                                          .client
+                                                          .auth
+                                                          .currentUser
+                                                          ?.id) ...[
+                                                    const PopupMenuDivider(),
+                                                    const PopupMenuItem(
+                                                      value: 'edit',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.edit),
+                                                          SizedBox(width: 12),
+                                                          Text('Edit'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'delete',
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(Icons.delete,
+                                                              color:
+                                                                  Colors.red),
+                                                          SizedBox(width: 12),
+                                                          Text('Delete',
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .red)),
+                                                        ],
+                                                      ),
+                                                    ),
                                                   ],
-                                                ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                backgroundColor: isPrivate
-                                                    ? Colors.orange[100]
-                                                    : Colors.green[100],
+                                                ],
                                               ),
                                             ],
                                           ),
