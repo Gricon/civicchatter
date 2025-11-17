@@ -46,7 +46,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final commentsResponse = await supabase
           .from('comments')
           .select(
-              '*, profiles_public!comments_user_id_fkey(id, handle, display_name)')
+              '*, profiles_public!comments_user_id_fkey(id, handle, display_name, avatar_url)')
           .eq('post_id', postId)
           .order('created_at', ascending: true);
 
@@ -170,7 +170,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           Row(
                             children: [
                               CircleAvatar(
-                                child: Text(displayName[0].toUpperCase()),
+                                backgroundImage: profile != null &&
+                                        profile['avatar_url'] != null
+                                    ? NetworkImage(profile['avatar_url'])
+                                    : null,
+                                child: profile == null ||
+                                        profile['avatar_url'] == null
+                                    ? Text(displayName[0].toUpperCase())
+                                    : null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -323,7 +330,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 16,
-                                      child: Text(displayName[0].toUpperCase()),
+                                      backgroundImage: profile != null &&
+                                              profile['avatar_url'] != null
+                                          ? NetworkImage(profile['avatar_url'])
+                                          : null,
+                                      child: profile == null ||
+                                              profile['avatar_url'] == null
+                                          ? Text(displayName[0].toUpperCase())
+                                          : null,
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(

@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final profilesResponse = await supabase
               .from('profiles_public')
-              .select('id, handle, display_name')
+              .select('id, handle, display_name, avatar_url')
               .inFilter('id', userIds.toList());
 
           for (var profile in profilesResponse) {
@@ -828,8 +828,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Row(
                                       children: [
                                         CircleAvatar(
-                                          child: Text(
-                                              displayName[0].toUpperCase()),
+                                          backgroundImage: profile != null &&
+                                                  profile['avatar_url'] != null
+                                              ? NetworkImage(
+                                                  profile['avatar_url'])
+                                              : null,
+                                          child: profile == null ||
+                                                  profile['avatar_url'] == null
+                                              ? Text(
+                                                  displayName[0].toUpperCase())
+                                              : null,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
