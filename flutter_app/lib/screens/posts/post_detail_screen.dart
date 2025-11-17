@@ -758,31 +758,43 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     Expanded(child: Text(label)),
                     if (count > 0) ...[
                       const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _showReactionUsers(type, emoji, label);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Theme.of(context).primaryColor
-                                : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            count.toString(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.white : Colors.black87,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              count.toString(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              _showReactionUsers(type, emoji, label);
+                            },
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     if (isSelected) ...[
