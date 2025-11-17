@@ -46,6 +46,7 @@ class CivicChatterAppBar extends StatelessWidget
         ),
         // Navigation Bar
         Container(
+          height: 48,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             border: Border(

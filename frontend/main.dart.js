@@ -49815,7 +49815,7 @@ if(o.e&&A.lt(a,!1).My())q.push(A.rR(n,n,B.rg,n,n,new A.a7M(a),n,n,"Back"))
 q.push(A.CM(A.dY(A.ul(A.kk(A.b([A.ask(A.lg(B.M4,A.K(a).ax.k3,n,18),A.aX("Home",n,n,n,A.eB(n,n,A.K(a).ax.k3,n,n,n,n,n,n,n,n,n,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),new A.a7N(a)),B.f0,A.ask(A.lg(B.M3,A.K(a).ax.k3,n,18),A.aX("Debates",n,n,n,A.eB(n,n,A.K(a).ax.k3,n,n,n,n,n,n,n,n,n,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),new A.a7O(a)),B.f0,A.ask(A.lg(B.m9,A.K(a).ax.k3,n,18),A.aX("My Profile",n,n,n,A.eB(n,n,A.K(a).ax.k3,n,n,n,n,n,n,n,n,n,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),new A.a7P(a)),B.f0,A.ask(A.lg(B.Md,A.K(a).ax.k3,n,18),A.aX("Settings",n,n,n,A.eB(n,n,A.K(a).ax.k3,n,n,n,n,n,n,n,n,n,n,n,n,n,n,!0,n,n,n,n,n,n,n,n),n,n),new A.a7Q(a))],r),B.N,B.J,B.bl,0),B.ih,B.aG),n,n),1))
 p=o.d
 if(p!=null)B.d.U(q,p)
-m=A.l0(n,A.kk(q,B.N,B.J,B.V,0),B.I,n,n,new A.dX(m.ax.k2,n,new A.dH(B.q,B.q,new A.aU(s.ch,1,B.y,-1),B.q),n,n,n,B.b6),n,n,n,n,n,n,n)
+m=A.l0(n,A.kk(q,B.N,B.J,B.V,0),B.I,n,n,new A.dX(m.ax.k2,n,new A.dH(B.q,B.q,new A.aU(s.ch,1,B.y,-1),B.q),n,n,n,B.b6),n,48,n,n,n,n,n)
 s=o.f
 return A.dk(A.b([l,m,A.a61(!1,!0,n,s==null?A.aX(o.c,n,n,n,n,n,n):s)],r),B.N,B.J,B.bl)},
 gGo(){return B.a1H}}
