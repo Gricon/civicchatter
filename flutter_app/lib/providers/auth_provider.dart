@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/profile_service.dart';
 import '../utils/auth_error_handler.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -159,22 +158,22 @@ class AuthProvider with ChangeNotifier {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'full_name': name,
+          'handle': handle.toLowerCase(),
+          'phone': phone,
+          'address': address,
+          'is_private': isPrivate,
+        },
       );
 
       if (response.user == null) {
         throw Exception('Sign up failed');
       }
 
-      // Create profile records
-      await ProfileService.createInitialRecords(
-        userId: response.user!.id,
-        handle: handle.toLowerCase(),
-        name: name,
-        email: email,
-        phone: phone,
-        address: address,
-        isPrivate: isPrivate,
-      );
+      // Database trigger will automatically create profile records
+      // Wait a moment for trigger to complete
+      await Future.delayed(const Duration(milliseconds: 500));
 
       _user = response.user;
       _error = null;
