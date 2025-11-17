@@ -851,8 +851,14 @@ class _HomeScreenState extends State<HomeScreen> {
             final isLargeScreen = constraints.maxWidth > 900;
             final showMessageCenter = constraints.maxWidth > 1000;
             final showNotifications = constraints.maxWidth > 1200;
-            final maxWidth = isLargeScreen ? 800.0 : double.infinity;
-            final horizontalPadding = isLargeScreen ? 24.0 : 16.0;
+            final maxWidth = 800.0;
+            final horizontalPadding = 24.0;
+
+            // Calculate remaining space for posts to stay centered
+            final notificationsWidth = showNotifications ? _notificationsPanelWidth + 8 : 0.0;
+            final messageWidth = showMessageCenter ? _messageCenterWidth + 8 : 0.0;
+            final availableWidth = constraints.maxWidth - notificationsWidth - messageWidth;
+            final postsPadding = (availableWidth - maxWidth).clamp(0.0, double.infinity) / 2;
 
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -898,17 +904,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
-                // Posts feed
-                Expanded(
+                // Posts feed - fixed width, centered
+                Container(
+                  width: availableWidth,
+                  padding: EdgeInsets.symmetric(horizontal: postsPadding.clamp(16.0, double.infinity)),
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
+                      horizontal: 0,
                       vertical: 16.0,
                     ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: maxWidth),
-                        child: Column(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -1833,7 +1840,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                ),
                 if (showMessageCenter) ...[
                   // Draggable divider
                   MouseRegion(
