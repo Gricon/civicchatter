@@ -16,19 +16,27 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _showPrivatePosts = false;
   String _selectedPostType = 'Text Post';
-  late QuillController _quillController;
+  QuillController? _quillController;
   XFile? _selectedFile;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _quillController = QuillController.basic();
+    _initializeController();
+  }
+
+  void _initializeController() {
+    try {
+      _quillController = QuillController.basic();
+    } catch (e) {
+      debugPrint('Error initializing QuillController: $e');
+    }
   }
 
   @override
   void dispose() {
-    _quillController.dispose();
+    _quillController?.dispose();
     super.dispose();
   }
 
@@ -126,7 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _submitPost() async {
-    final plainText = _quillController.document.toPlainText().trim();
+    if (_quillController == null) return;
+
+    final plainText = _quillController!.document.toPlainText().trim();
 
     if (_selectedPostType == 'Text Post' && plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
-      _quillController.clear();
+      _quillController?.clear();
       _selectedFile = null;
     });
   }
@@ -390,37 +400,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _buildToolbarButton(Icons.format_bold, 'Bold',
                                       () {
                                     _quillController
-                                        .formatSelection(Attribute.bold);
+                                        ?.formatSelection(Attribute.bold);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_italic, 'Italic', () {
                                     _quillController
-                                        .formatSelection(Attribute.italic);
+                                        ?.formatSelection(Attribute.italic);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_underlined, 'Underline', () {
                                     _quillController
-                                        .formatSelection(Attribute.underline);
+                                        ?.formatSelection(Attribute.underline);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_strikethrough, 'Strike', () {
-                                    _quillController.formatSelection(
+                                    _quillController?.formatSelection(
                                         Attribute.strikeThrough);
                                   }),
                                   const VerticalDivider(),
                                   _buildToolbarButton(
                                       Icons.format_align_left, 'Left', () {
-                                    _quillController.formatSelection(
+                                    _quillController?.formatSelection(
                                         Attribute.leftAlignment);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_align_center, 'Center', () {
-                                    _quillController.formatSelection(
+                                    _quillController?.formatSelection(
                                         Attribute.centerAlignment);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_align_right, 'Right', () {
-                                    _quillController.formatSelection(
+                                    _quillController?.formatSelection(
                                         Attribute.rightAlignment);
                                   }),
                                   const VerticalDivider(),
@@ -428,31 +438,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Icons.format_list_bulleted, 'Bullets',
                                       () {
                                     _quillController
-                                        .formatSelection(Attribute.ul);
+                                        ?.formatSelection(Attribute.ul);
                                   }),
                                   _buildToolbarButton(
                                       Icons.format_list_numbered, 'Numbers',
                                       () {
                                     _quillController
-                                        .formatSelection(Attribute.ol);
+                                        ?.formatSelection(Attribute.ol);
                                   }),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 8),
                             // Rich Text Editor
-                            Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
+                            if (_quillController != null)
+                              Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context).dividerColor,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                child: QuillEditor.basic(
+                                  controller: _quillController!,
+                                ),
                               ),
-                              child: QuillEditor.basic(
-                                controller: _quillController,
-                              ),
-                            ),
                             const SizedBox(height: 12),
                             if (_selectedFile != null)
                               Container(
