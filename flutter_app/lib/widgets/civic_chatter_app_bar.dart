@@ -22,7 +22,7 @@ class CivicChatterAppBar extends StatelessWidget
         // Civic Chatter Header
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
             border: Border(
@@ -132,5 +132,5 @@ class CivicChatterAppBar extends StatelessWidget
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(140);
+  Size get preferredSize => const Size.fromHeight(138);
 }
