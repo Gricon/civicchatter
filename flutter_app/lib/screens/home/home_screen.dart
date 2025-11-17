@@ -76,10 +76,24 @@ class _HomeScreenState extends State<HomeScreen> {
         } catch (e) {
           debugPrint('Error loading profiles: $e');
         }
-      } // Merge posts with their profiles
+      }
+
+      // Merge posts with their profiles
       final postsWithProfiles = postsResponse.map((post) {
         final postMap = Map<String, dynamic>.from(post);
-        postMap['profiles'] = profilesMap[post['user_id']];
+        final userId = post['user_id'];
+        final profile = profilesMap[userId];
+
+        // If no profile exists, create a basic one with user ID
+        if (profile == null) {
+          postMap['profiles'] = {
+            'id': userId,
+            'username': 'User ${userId?.substring(0, 8) ?? 'Unknown'}',
+            'display_name': null,
+          };
+        } else {
+          postMap['profiles'] = profile;
+        }
         return postMap;
       }).toList();
 
