@@ -200,7 +200,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         'post_id': postId,
         'user_id': userId,
         'content': commentText,
-        if (_replyingToCommentId != null) 'parent_comment_id': _replyingToCommentId,
+        if (_replyingToCommentId != null)
+          'parent_comment_id': _replyingToCommentId,
       });
 
       _commentController.clear();
@@ -318,6 +319,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
+                                  // Report/Block button for post author
+                                  if (widget.post['user_id'] !=
+                                      Supabase
+                                          .instance.client.auth.currentUser?.id)
+                                    IconButton(
+                                      icon: const Icon(Icons.more_vert),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) =>
+                                              ReportBlockDialog(
+                                            reportedUserId:
+                                                widget.post['user_id'],
+                                            reportedUsername: displayName,
+                                            postId: widget.post['id'],
+                                            commentId: null,
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   if (widget.post['media_type'] != null)
                                     Chip(
                                       label: Text(widget.post['media_type']),
@@ -495,7 +516,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       icon: const Icon(Icons.reply, size: 16),
                                       label: const Text('Reply'),
                                       style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8),
                                         minimumSize: const Size(0, 32),
                                       ),
                                       onPressed: () {
@@ -503,20 +525,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           _replyingToCommentId = comment['id'];
                                           _replyingToUsername = displayName;
                                         });
-                                        _commentController.text = '@$displayName ';
+                                        _commentController.text =
+                                            '@$displayName ';
                                       },
                                     ),
                                     const Spacer(),
-                                    if (comment['user_id'] != Supabase.instance.client.auth.currentUser?.id)
+                                    if (comment['user_id'] !=
+                                        Supabase.instance.client.auth
+                                            .currentUser?.id)
                                       IconButton(
-                                        icon: const Icon(Icons.more_vert, size: 20),
+                                        icon: const Icon(Icons.more_vert,
+                                            size: 20),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
                                         onPressed: () {
                                           showDialog(
                                             context: context,
-                                            builder: (context) => ReportBlockDialog(
-                                              reportedUserId: comment['user_id'],
+                                            builder: (context) =>
+                                                ReportBlockDialog(
+                                              reportedUserId:
+                                                  comment['user_id'],
                                               reportedUsername: displayName,
                                               postId: widget.post['id'],
                                               commentId: comment['id'],
@@ -613,7 +641,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.send),
                         style: IconButton.styleFrom(
