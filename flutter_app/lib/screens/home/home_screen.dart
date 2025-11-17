@@ -849,7 +849,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: showMessageCenter ? 65 : 100,
+                  flex: showMessageCenter ? 82 : 100,
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
                       horizontal: horizontalPadding,
@@ -1786,7 +1786,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (showMessageCenter)
                   Expanded(
-                    flex: 35,
+                    flex: 18,
                     child: const MessageCenter(),
                   ),
               ],
