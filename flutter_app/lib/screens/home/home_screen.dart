@@ -26,6 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoadingPosts = false;
 
+  // Filter and sort options
+  String _sortBy = 'newest'; // newest, oldest, popular
+  String _filterBy = 'all'; // all, public, private
+
   @override
   void initState() {
     super.initState();
@@ -49,12 +53,29 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Fetch posts without joining profiles
-      final postsResponse = await supabase
-          .from('posts')
-          .select('*')
-          .order('created_at', ascending: false)
-          .limit(50);
+      // Build query based on filter
+      var query = supabase.from('posts').select('*');
+
+      // Apply filter
+      if (_filterBy == 'public') {
+        query = query.eq('is_private', false);
+      } else if (_filterBy == 'private') {
+        query = query.eq('is_private', true);
+      }
+
+      // Apply sort and execute
+      List<dynamic> postsResponse;
+      if (_sortBy == 'newest') {
+        postsResponse =
+            await query.order('created_at', ascending: false).limit(50);
+      } else if (_sortBy == 'oldest') {
+        postsResponse =
+            await query.order('created_at', ascending: true).limit(50);
+      } else {
+        // popular - TODO: Add like/comment count sorting when those features are added
+        postsResponse =
+            await query.order('created_at', ascending: false).limit(50);
+      }
 
       // Fetch all unique user IDs from posts
       final userIds = <String>{};
@@ -765,6 +786,160 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // Filter and Sort Bar
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            // Filter Button
+                            Expanded(
+                              child: PopupMenuButton<String>(
+                                initialValue: _filterBy,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _filterBy = value;
+                                  });
+                                  _loadPosts();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.filter_list, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Filter: ${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'all',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.public),
+                                        SizedBox(width: 8),
+                                        Text('All Posts'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'public',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.public),
+                                        SizedBox(width: 8),
+                                        Text('Public Only'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'private',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.lock),
+                                        SizedBox(width: 8),
+                                        Text('Private Only'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Sort Button
+                            Expanded(
+                              child: PopupMenuButton<String>(
+                                initialValue: _sortBy,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _sortBy = value;
+                                  });
+                                  _loadPosts();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.sort, size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Sort: ${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'newest',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.new_releases),
+                                        SizedBox(width: 8),
+                                        Text('Newest First'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'oldest',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.history),
+                                        SizedBox(width: 8),
+                                        Text('Oldest First'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'popular',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.trending_up),
+                                        SizedBox(width: 8),
+                                        Text('Most Popular'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // Posts List
                       if (_isLoadingPosts)
                         const Center(
