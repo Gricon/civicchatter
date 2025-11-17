@@ -25,6 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final ImagePicker _picker = ImagePicker();
   List<Map<String, dynamic>> _posts = [];
   bool _isLoadingPosts = false;
+  Map<String, Map<String, int>> _postReactions =
+      {}; // postId -> {reactionType -> count}
+  Map<String, String?> _userReactions = {}; // postId -> userReactionType
 
   // Filter and sort options
   String _sortBy = 'newest'; // newest, oldest, popular
@@ -126,6 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _posts = postsWithProfiles;
           _isLoadingPosts = false;
         });
+        // Load reactions for all posts
+        _loadReactionsForPosts();
       }
     } catch (e) {
       debugPrint('Error loading posts: $e');
@@ -133,6 +138,97 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _isLoadingPosts = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadReactionsForPosts() async {
+    if (_posts.isEmpty) return;
+
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      final postIds = _posts.map((p) => p['id']).toList();
+
+      // Load all reactions for these posts
+      final reactionsResponse = await supabase
+          .from('reactions')
+          .select('post_id, reaction_type, user_id')
+          .inFilter('post_id', postIds);
+
+      // Process reactions
+      final Map<String, Map<String, int>> reactionCounts = {};
+      final Map<String, String?> userReactions = {};
+
+      for (var reaction in reactionsResponse) {
+        final postId = reaction['post_id'];
+        final reactionType = reaction['reaction_type'];
+        final reactionUserId = reaction['user_id'];
+
+        // Count reactions
+        if (!reactionCounts.containsKey(postId)) {
+          reactionCounts[postId] = {};
+        }
+        reactionCounts[postId]![reactionType] =
+            (reactionCounts[postId]![reactionType] ?? 0) + 1;
+
+        // Track user's own reaction
+        if (userId != null && reactionUserId == userId) {
+          userReactions[postId] = reactionType;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _postReactions = reactionCounts;
+          _userReactions = userReactions;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading reactions: $e');
+    }
+  }
+
+  Future<void> _toggleReaction(String postId, String reactionType) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+
+      if (userId == null) return;
+
+      final currentReaction = _userReactions[postId];
+
+      if (currentReaction == reactionType) {
+        // Remove reaction
+        await supabase
+            .from('reactions')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } else if (currentReaction != null) {
+        // Update reaction
+        await supabase
+            .from('reactions')
+            .update({'reaction_type': reactionType})
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } else {
+        // Add new reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': reactionType,
+        });
+      }
+
+      // Reload reactions
+      await _loadReactionsForPosts();
+    } catch (e) {
+      debugPrint('Error toggling reaction: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating reaction: $e')),
+        );
       }
     }
   }
@@ -1108,6 +1204,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                             .textTheme
                                             .bodyLarge,
                                       ),
+                                      const SizedBox(height: 12),
+
+                                      // Reaction Bar
+                                      _buildReactionBar(post['id']),
+
                                       const SizedBox(height: 8),
                                       Row(
                                         children: [
@@ -1164,5 +1265,71 @@ class _HomeScreenState extends State<HomeScreen> {
     final timezone = localTime.timeZoneName;
 
     return '$formattedDate $timezone';
+  }
+
+  Widget _buildReactionBar(String postId) {
+    final reactions = _postReactions[postId] ?? {};
+    final userReaction = _userReactions[postId];
+
+    final reactionButtons = [
+      {'type': 'like', 'emoji': '👍', 'label': 'Like'},
+      {'type': 'love', 'emoji': '❤️', 'label': 'Love'},
+      {'type': 'laugh', 'emoji': '😂', 'label': 'Laugh'},
+      {'type': 'wow', 'emoji': '😮', 'label': 'Wow'},
+      {'type': 'sad', 'emoji': '😢', 'label': 'Sad'},
+      {'type': 'angry', 'emoji': '😠', 'label': 'Angry'},
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: reactionButtons.map((reaction) {
+        final type = reaction['type'] as String;
+        final emoji = reaction['emoji'] as String;
+        final count = reactions[type] ?? 0;
+        final isSelected = userReaction == type;
+
+        return InkWell(
+          onTap: () => _toggleReaction(postId, type),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Theme.of(context).primaryColor.withOpacity(0.2)
+                  : Theme.of(context).cardColor,
+              border: Border.all(
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 18),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    count.toString(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : null,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 }

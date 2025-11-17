@@ -20,11 +20,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   List<Map<String, dynamic>> _comments = [];
   bool _isLoadingComments = false;
   bool _isSubmitting = false;
+  Map<String, int> _reactions = {}; // reactionType -> count
+  String? _userReaction; // user's current reaction
 
   @override
   void initState() {
     super.initState();
     _loadComments();
+    _loadReactions();
   }
 
   @override
@@ -67,6 +70,89 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             content: Text('Error loading comments: $e'),
             backgroundColor: Colors.orange,
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadReactions() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      final postId = widget.post['id'];
+
+      // Load all reactions for this post
+      final reactionsResponse = await supabase
+          .from('reactions')
+          .select('reaction_type, user_id')
+          .eq('post_id', postId);
+
+      // Process reactions
+      final Map<String, int> reactionCounts = {};
+      String? userReaction;
+
+      for (var reaction in reactionsResponse) {
+        final reactionType = reaction['reaction_type'];
+        final reactionUserId = reaction['user_id'];
+
+        // Count reactions
+        reactionCounts[reactionType] = (reactionCounts[reactionType] ?? 0) + 1;
+
+        // Track user's own reaction
+        if (userId != null && reactionUserId == userId) {
+          userReaction = reactionType;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _reactions = reactionCounts;
+          _userReaction = userReaction;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading reactions: $e');
+    }
+  }
+
+  Future<void> _toggleReaction(String reactionType) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      final postId = widget.post['id'];
+
+      if (userId == null) return;
+
+      if (_userReaction == reactionType) {
+        // Remove reaction
+        await supabase
+            .from('reactions')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } else if (_userReaction != null) {
+        // Update reaction
+        await supabase
+            .from('reactions')
+            .update({'reaction_type': reactionType})
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } else {
+        // Add new reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': reactionType,
+        });
+      }
+
+      // Reload reactions
+      await _loadReactions();
+    } catch (e) {
+      debugPrint('Error toggling reaction: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating reaction: $e')),
         );
       }
     }
@@ -243,6 +329,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             widget.post['content'] ?? '',
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
+                          const SizedBox(height: 16),
+
+                          // Reaction Bar
+                          _buildReactionBar(),
                         ],
                       ),
                     ),
@@ -440,6 +530,69 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReactionBar() {
+    final reactionButtons = [
+      {'type': 'like', 'emoji': '👍', 'label': 'Like'},
+      {'type': 'love', 'emoji': '❤️', 'label': 'Love'},
+      {'type': 'laugh', 'emoji': '😂', 'label': 'Laugh'},
+      {'type': 'wow', 'emoji': '😮', 'label': 'Wow'},
+      {'type': 'sad', 'emoji': '😢', 'label': 'Sad'},
+      {'type': 'angry', 'emoji': '😠', 'label': 'Angry'},
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: reactionButtons.map((reaction) {
+        final type = reaction['type'] as String;
+        final emoji = reaction['emoji'] as String;
+        final count = _reactions[type] ?? 0;
+        final isSelected = _userReaction == type;
+
+        return InkWell(
+          onTap: () => _toggleReaction(type),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Theme.of(context).primaryColor.withOpacity(0.2)
+                  : Theme.of(context).cardColor,
+              border: Border.all(
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 18),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    count.toString(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : null,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
