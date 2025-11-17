@@ -273,10 +273,9 @@ class _HomeScreenState extends State<HomeScreen> {
         title: 'Home',
         showBackButton: false,
         titleWidget: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             const Text('Home'),
-            const SizedBox(width: 16),
+            const Spacer(),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -312,9 +311,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: _showPrivatePosts
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.onSurface,
-                    fontWeight: _showPrivatePosts
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    fontWeight:
+                        _showPrivatePosts ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
