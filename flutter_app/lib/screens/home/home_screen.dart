@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
+import '../posts/post_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -259,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'content': plainText,
         'media_url': _selectedFile?.path,
         'media_type': _selectedPostType,
+        'is_private': _showPrivatePosts,
       }).select();
 
       debugPrint('Insert response: $response');
@@ -801,62 +804,134 @@ class _HomeScreenState extends State<HomeScreen> {
                                   'Unknown User')
                               : 'Unknown User';
                           final createdAt = DateTime.parse(post['created_at']);
-                          final timeAgo = _getTimeAgo(createdAt);
+                          final timestamp = _formatTimestamp(createdAt);
+                          final isPrivate = post['is_private'] ?? false;
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      CircleAvatar(
-                                        child:
-                                            Text(displayName[0].toUpperCase()),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        PostDetailScreen(post: post),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          child: Text(
+                                              displayName[0].toUpperCase()),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                displayName,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                              Text(
+                                                timestamp,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Colors.grey[600],
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Column(
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                              CrossAxisAlignment.end,
                                           children: [
-                                            Text(
-                                              displayName,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.bold,
+                                            if (post['media_type'] != null)
+                                              Chip(
+                                                label: Text(post['media_type']),
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                            const SizedBox(height: 4),
+                                            Chip(
+                                              label: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    isPrivate
+                                                        ? Icons.lock
+                                                        : Icons.public,
+                                                    size: 16,
                                                   ),
-                                            ),
-                                            Text(
-                                              timeAgo,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Colors.grey[600],
-                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(isPrivate
+                                                      ? 'Private'
+                                                      : 'Public'),
+                                                ],
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              backgroundColor: isPrivate
+                                                  ? Colors.orange[100]
+                                                  : Colors.green[100],
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      if (post['media_type'] != null)
-                                        Chip(
-                                          label: Text(post['media_type']),
-                                          padding: EdgeInsets.zero,
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      post['content'] ?? '',
+                                      style:
+                                          Theme.of(context).textTheme.bodyLarge,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.comment_outlined,
+                                          size: 16,
+                                          color: Colors.grey[600],
                                         ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    post['content'] ?? '',
-                                    style:
-                                        Theme.of(context).textTheme.bodyLarge,
-                                  ),
-                                ],
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'View comments',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Colors.grey[600],
+                                              ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -872,24 +947,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  String _formatTimestamp(DateTime dateTime) {
+    // Convert to local time
+    final localTime = dateTime.toLocal();
 
-    if (difference.inDays > 365) {
-      final years = (difference.inDays / 365).floor();
-      return '$years ${years == 1 ? 'year' : 'years'} ago';
-    } else if (difference.inDays > 30) {
-      final months = (difference.inDays / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'} ago';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} ${difference.inHours == 1 ? 'hour' : 'hours'} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} ${difference.inMinutes == 1 ? 'minute' : 'minutes'} ago';
-    } else {
-      return 'Just now';
-    }
+    // Format: "2025-11-17 14:30:45 PST" (24-hour format with timezone)
+    final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final formattedDate = dateFormat.format(localTime);
+
+    // Get timezone abbreviation
+    final timezone = localTime.timeZoneName;
+
+    return '$formattedDate $timezone';
   }
 }

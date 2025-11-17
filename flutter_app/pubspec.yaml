@@ -38,6 +38,9 @@ dependencies:
   
   # Rich text editor
   flutter_quill: ^11.5.0
+  
+  # Date formatting
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
