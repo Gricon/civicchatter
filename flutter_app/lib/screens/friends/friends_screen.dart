@@ -379,7 +379,9 @@ class _InviteFriendsSheetState extends State<InviteFriendsSheet> {
           Text(
             'Invite your friends to join CivicChatter and connect!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
                 ),
           ),
           const SizedBox(height: 24),
@@ -491,9 +493,15 @@ class _InviteFriendsSheetState extends State<InviteFriendsSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1f2937)
+                          : Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF374151)
+                            : Colors.grey[300]!,
+                      ),
                     ),
                     child: Text(
                       _inviteLink,
