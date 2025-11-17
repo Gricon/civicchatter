@@ -53116,7 +53116,7 @@ if(J.t(k,"user_id")!=null)J.et(l,J.t(k,"user_id"))}j=A.v(d,t.z)
 s=l.a!==0?7:8
 break
 case 7:q=10
-d=n.iP("profiles_public").tD("id, username, display_name")
+d=n.iP("profiles_public").tD("id, handle, display_name")
 b=l
 b=A.S(b,A.n(b).i("co.E"))
 s=13
@@ -53329,7 +53329,7 @@ $1(a){var s,r="profiles",q=t.N,p=t.z,o=A.cO(a,q,p),n=a.h(0,"user_id"),m=this.a.h
 if(m==null){s=n
 s=s==null?null:J.bbX(s,0,8)
 if(s==null)s="Unknown"
-J.bt(o,r,A.R(["id",n,"username","User "+s,"display_name",null],q,p))}else J.bt(o,r,m)
+J.bt(o,r,A.R(["id",n,"handle","User "+s,"display_name",null],q,p))}else J.bt(o,r,m)
 return o},
 $S:535}
 A.aKA.prototype={
@@ -53447,7 +53447,7 @@ A.aKJ.prototype={
 $2(a,b){var s,r,q,p,o,n=null,m="Unknown User",l="media_type",k=this.a,j=k.x[b],i=j.h(0,"profiles")
 if(i!=null){s=J.b1(i)
 r=s.h(i,"display_name")
-s=r==null?s.h(i,"username"):r
+s=r==null?s.h(i,"handle"):r
 q=s==null?m:s}else q=m
 p=k.auB(A.Tm(j.h(0,"created_at")))
 k=A.xY(n,n,A.aQ(J.bbY(J.t(q,0)),n,n,n,n,n,n),n)

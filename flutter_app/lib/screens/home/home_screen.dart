@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           final profilesResponse = await supabase
               .from('profiles_public')
-              .select('id, username, display_name')
+              .select('id, handle, display_name')
               .inFilter('id', userIds.toList());
 
           for (var profile in profilesResponse) {
@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (profile == null) {
           postMap['profiles'] = {
             'id': userId,
-            'username': 'User ${userId?.substring(0, 8) ?? 'Unknown'}',
+            'handle': 'User ${userId?.substring(0, 8) ?? 'Unknown'}',
             'display_name': null,
           };
         } else {
@@ -797,7 +797,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final profile = post['profiles'];
                           final displayName = profile != null
                               ? (profile['display_name'] ??
-                                  profile['username'] ??
+                                  profile['handle'] ??
                                   'Unknown User')
                               : 'Unknown User';
                           final createdAt = DateTime.parse(post['created_at']);
