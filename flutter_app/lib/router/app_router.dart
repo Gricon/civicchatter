@@ -11,6 +11,7 @@ import '../screens/debates/debates_screen.dart';
 import '../screens/debates/debate_detail_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/edit_profile_screen.dart';
+import '../screens/settings/background_settings_screen.dart';
 import '../screens/debug/debug_screen.dart';
 
 class AppRouter {
@@ -127,6 +128,13 @@ class AppRouter {
         name: 'edit-profile',
         pageBuilder: (context, state) => NoTransitionPage(
           child: const EditProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/settings/background',
+        name: 'background-settings',
+        pageBuilder: (context, state) => NoTransitionPage(
+          child: const BackgroundSettingsScreen(),
         ),
       ),
       GoRoute(
