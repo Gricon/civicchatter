@@ -14,6 +14,29 @@ Files
   Inserts missing profiles and debate pages for existing users. Safe to
   run multiple times; checks for existing rows before inserting.
 
+- create_messages_table.sql
+  Creates the `messages` table for direct messaging between users, with
+  proper RLS policies. Run this once to enable the messaging feature.
+
+- allow_multiple_reactions.sql
+  Updates the reactions system to allow up to 2 reactions per post per user.
+  Creates a database trigger to enforce the limit.
+
+- create_reports_table.sql
+  Creates the `reports` table for content moderation system with RLS policies.
+
+How to apply (Supabase SQL editor)
+1. Open your Supabase project.
+2. Go to "SQL Editor" → New query.
+3. Paste the contents of the desired SQL file and run it. You should
+   see confirmation that the tables/functions/triggers were created.
+4. For initial setup, run files in this order:
+   - create_auth_trigger.sql
+   - backfill_profiles.sql (optional, for existing users)
+   - create_messages_table.sql (for messaging feature)
+   - allow_multiple_reactions.sql (for reaction system)
+   - create_reports_table.sql (for content moderation)
+
 How to apply (Supabase SQL editor)
 1. Open your Supabase project.
 2. Go to "SQL Editor" → New query.
