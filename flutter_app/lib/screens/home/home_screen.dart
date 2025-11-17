@@ -1438,124 +1438,42 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ],
                                             ),
                                           ),
-                                          Row(
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
                                             children: [
-                                              Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
-                                                children: [
-                                                  if (post['media_type'] !=
-                                                      null)
-                                                    Chip(
-                                                      label: Text(
-                                                          post['media_type']),
-                                                      padding: EdgeInsets.zero,
-                                                    ),
-                                                  const SizedBox(height: 4),
-                                                  Chip(
-                                                    label: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        Icon(
-                                                          isPrivate
-                                                              ? Icons.lock
-                                                              : Icons.public,
-                                                          size: 16,
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 4),
-                                                        Text(isPrivate
-                                                            ? 'Private'
-                                                            : 'Public'),
-                                                      ],
-                                                    ),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                    backgroundColor: isPrivate
-                                                        ? Colors.orange[100]
-                                                        : Colors.green[100],
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(width: 8),
-                                              PopupMenuButton<String>(
-                                                icon: Icon(
-                                                  Icons.more_vert,
-                                                  color: Colors.grey[600],
+                                              if (post['media_type'] != null)
+                                                Chip(
+                                                  label:
+                                                      Text(post['media_type']),
+                                                  padding: EdgeInsets.zero,
                                                 ),
-                                                onSelected: (value) =>
-                                                    _handlePostAction(
-                                                        value, post),
-                                                itemBuilder: (context) => [
-                                                  const PopupMenuItem(
-                                                    value: 'share',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(Icons.share),
-                                                        SizedBox(width: 12),
-                                                        Text('Share'),
-                                                      ],
+                                              const SizedBox(height: 4),
+                                              Chip(
+                                                label: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      isPrivate
+                                                          ? Icons.lock
+                                                          : Icons.public,
+                                                      size: 16,
                                                     ),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'copy_link',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(Icons.link),
-                                                        SizedBox(width: 12),
-                                                        Text('Copy Link'),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'report',
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(Icons.flag),
-                                                        SizedBox(width: 12),
-                                                        Text('Report'),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  if (post['user_id'] ==
-                                                      Supabase
-                                                          .instance
-                                                          .client
-                                                          .auth
-                                                          .currentUser
-                                                          ?.id) ...[
-                                                    const PopupMenuDivider(),
-                                                    const PopupMenuItem(
-                                                      value: 'edit',
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(Icons.edit),
-                                                          SizedBox(width: 12),
-                                                          Text('Edit'),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    const PopupMenuItem(
-                                                      value: 'delete',
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(Icons.delete,
-                                                              color:
-                                                                  Colors.red),
-                                                          SizedBox(width: 12),
-                                                          Text('Delete',
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                      .red)),
-                                                        ],
-                                                      ),
-                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(isPrivate
+                                                        ? 'Private'
+                                                        : 'Public'),
                                                   ],
-                                                ],
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                backgroundColor: isPrivate
+                                                    ? Colors.orange[100]
+                                                    : Colors.green[100],
                                               ),
                                             ],
                                           ),
@@ -1596,6 +1514,77 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Icons.arrow_forward_ios,
                                             size: 12,
                                             color: Colors.grey[600],
+                                          ),
+                                          const Spacer(),
+                                          PopupMenuButton<String>(
+                                            icon: Icon(
+                                              Icons.more_vert,
+                                              color: Colors.grey[600],
+                                              size: 20,
+                                            ),
+                                            onSelected: (value) =>
+                                                _handlePostAction(value, post),
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                value: 'share',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.share),
+                                                    SizedBox(width: 12),
+                                                    Text('Share'),
+                                                  ],
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'copy_link',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.link),
+                                                    SizedBox(width: 12),
+                                                    Text('Copy Link'),
+                                                  ],
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'report',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.flag),
+                                                    SizedBox(width: 12),
+                                                    Text('Report'),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (post['user_id'] ==
+                                                  Supabase.instance.client.auth
+                                                      .currentUser?.id) ...[
+                                                const PopupMenuDivider(),
+                                                const PopupMenuItem(
+                                                  value: 'edit',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.edit),
+                                                      SizedBox(width: 12),
+                                                      Text('Edit'),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const PopupMenuItem(
+                                                  value: 'delete',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.delete,
+                                                          color: Colors.red),
+                                                      SizedBox(width: 12),
+                                                      Text('Delete',
+                                                          style: TextStyle(
+                                                              color:
+                                                                  Colors.red)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ],
                                       ),
