@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 
 class BackgroundSettingsScreen extends StatefulWidget {
   const BackgroundSettingsScreen({super.key});
@@ -18,6 +19,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
   Color _solidColor = const Color(0xFFF5F5F5);
   Color _gradientStartColor = const Color(0xFF667eea);
   Color _gradientEndColor = const Color(0xFF764ba2);
+  double _gradientAngle = 135.0; // Gradient angle in degrees (0-360)
   String? _backgroundImagePath;
 
   @override
@@ -35,6 +37,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
           Color(prefs.getInt('background_gradient_start') ?? 0xFF667eea);
       _gradientEndColor =
           Color(prefs.getInt('background_gradient_end') ?? 0xFF764ba2);
+      _gradientAngle = prefs.getDouble('background_gradient_angle') ?? 135.0;
       _backgroundImagePath = prefs.getString('background_image_path');
     });
   }
@@ -45,6 +48,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
     await prefs.setInt('background_solid_color', _solidColor.value);
     await prefs.setInt('background_gradient_start', _gradientStartColor.value);
     await prefs.setInt('background_gradient_end', _gradientEndColor.value);
+    await prefs.setDouble('background_gradient_angle', _gradientAngle);
     if (_backgroundImagePath != null) {
       await prefs.setString('background_image_path', _backgroundImagePath!);
     }
@@ -85,6 +89,26 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
           ),
         );
       }
+    }
+  }
+
+  // Convert angle in degrees to Alignment pair
+  AlignmentGeometry _angleToAlignment(double angle, {bool isBegin = true}) {
+    // Normalize angle to 0-360
+    final normalizedAngle = angle % 360;
+    // Convert to radians
+    final radians = normalizedAngle * math.pi / 180;
+
+    if (isBegin) {
+      return Alignment(
+        -1 * math.cos(radians),
+        -1 * math.sin(radians),
+      );
+    } else {
+      return Alignment(
+        1 * math.cos(radians),
+        1 * math.sin(radians),
+      );
     }
   }
 
@@ -168,6 +192,44 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
     );
   }
 
+  Widget _buildAnglePreset(String arrow, double angle) {
+    final isSelected = (_gradientAngle - angle).abs() < 1;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _gradientAngle = angle;
+        });
+      },
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            arrow,
+            style: TextStyle(
+              fontSize: 24,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey[700],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPreview() {
     Widget preview;
 
@@ -179,8 +241,8 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
         preview = Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: _angleToAlignment(_gradientAngle, isBegin: true),
+              end: _angleToAlignment(_gradientAngle, isBegin: false),
               colors: [_gradientStartColor, _gradientEndColor],
             ),
           ),
@@ -324,6 +386,65 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
                 _gradientEndColor = color;
               });
             }),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.rotate_right,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Gradient Direction',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${_gradientAngle.toInt()}°',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                    ),
+                    Slider(
+                      value: _gradientAngle,
+                      min: 0,
+                      max: 360,
+                      divisions: 72,
+                      label: '${_gradientAngle.toInt()}°',
+                      onChanged: (value) {
+                        setState(() {
+                          _gradientAngle = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildAnglePreset('→', 0),
+                        _buildAnglePreset('↗', 45),
+                        _buildAnglePreset('↑', 90),
+                        _buildAnglePreset('↖', 135),
+                        _buildAnglePreset('←', 180),
+                        _buildAnglePreset('↙', 225),
+                        _buildAnglePreset('↓', 270),
+                        _buildAnglePreset('↘', 315),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
           if (_backgroundType == 'image') ...[
             Card(
@@ -373,6 +494,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
               await prefs.remove('background_solid_color');
               await prefs.remove('background_gradient_start');
               await prefs.remove('background_gradient_end');
+              await prefs.remove('background_gradient_angle');
               await prefs.remove('background_image_path');
 
               setState(() {
@@ -380,6 +502,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
                 _solidColor = const Color(0xFFF5F5F5);
                 _gradientStartColor = const Color(0xFF667eea);
                 _gradientEndColor = const Color(0xFF764ba2);
+                _gradientAngle = 135.0;
                 _backgroundImagePath = null;
               });
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math' as math;
 
 class CustomBackground extends StatefulWidget {
   final Widget child;
@@ -18,6 +19,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
   static Color? _cachedSolidColor;
   static Color? _cachedGradientStartColor;
   static Color? _cachedGradientEndColor;
+  static double? _cachedGradientAngle;
   static String? _cachedBackgroundImagePath;
   static bool _hasLoadedOnce = false;
 
@@ -25,6 +27,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
   Color _solidColor = const Color(0xFFF5F5F5);
   Color _gradientStartColor = const Color(0xFF667eea);
   Color _gradientEndColor = const Color(0xFF764ba2);
+  double _gradientAngle = 135.0;
   String? _backgroundImagePath;
 
   @override
@@ -37,6 +40,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
       _gradientStartColor =
           _cachedGradientStartColor ?? const Color(0xFF667eea);
       _gradientEndColor = _cachedGradientEndColor ?? const Color(0xFF764ba2);
+      _gradientAngle = _cachedGradientAngle ?? 135.0;
       _backgroundImagePath = _cachedBackgroundImagePath;
     }
     _loadSettings();
@@ -51,6 +55,8 @@ class _CustomBackgroundState extends State<CustomBackground> {
         Color(prefs.getInt('background_gradient_start') ?? 0xFF667eea);
     final newGradientEndColor =
         Color(prefs.getInt('background_gradient_end') ?? 0xFF764ba2);
+    final newGradientAngle =
+        prefs.getDouble('background_gradient_angle') ?? 135.0;
     final newBackgroundImagePath = prefs.getString('background_image_path');
 
     // Update cache
@@ -58,6 +64,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
     _cachedSolidColor = newSolidColor;
     _cachedGradientStartColor = newGradientStartColor;
     _cachedGradientEndColor = newGradientEndColor;
+    _cachedGradientAngle = newGradientAngle;
     _cachedBackgroundImagePath = newBackgroundImagePath;
     _hasLoadedOnce = true;
 
@@ -67,8 +74,29 @@ class _CustomBackgroundState extends State<CustomBackground> {
         _solidColor = newSolidColor;
         _gradientStartColor = newGradientStartColor;
         _gradientEndColor = newGradientEndColor;
+        _gradientAngle = newGradientAngle;
         _backgroundImagePath = newBackgroundImagePath;
       });
+    }
+  }
+
+  // Convert angle in degrees to Alignment pair
+  AlignmentGeometry _angleToAlignment(double angle, {bool isBegin = true}) {
+    // Normalize angle to 0-360
+    final normalizedAngle = angle % 360;
+    // Convert to radians
+    final radians = normalizedAngle * math.pi / 180;
+
+    if (isBegin) {
+      return Alignment(
+        -1 * math.cos(radians),
+        -1 * math.sin(radians),
+      );
+    } else {
+      return Alignment(
+        1 * math.cos(radians),
+        1 * math.sin(radians),
+      );
     }
   }
 
@@ -94,8 +122,8 @@ class _CustomBackgroundState extends State<CustomBackground> {
         background = Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: _angleToAlignment(_gradientAngle, isBegin: true),
+              end: _angleToAlignment(_gradientAngle, isBegin: false),
               colors: [_gradientStartColor, _gradientEndColor],
             ),
           ),
