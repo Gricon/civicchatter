@@ -830,6 +830,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return CustomBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -845,6 +847,86 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        drawer: isMobile
+            ? Drawer(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    DrawerHeader(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.forum,
+                            size: 48,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Civic Chatter',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.home),
+                      title: const Text('Home'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go('/home');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.gavel),
+                      title: const Text('Debates'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go('/debates');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.person),
+                      title: const Text('My Profile'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go('/profile');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.settings),
+                      title: const Text('Settings'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go('/settings');
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.logout),
+                      title: const Text('Logout'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _handleLogout();
+                      },
+                    ),
+                  ],
+                ),
+              )
+            : null,
         body: LayoutBuilder(
           builder: (context, constraints) {
             // Responsive: constrain max width on large screens (web/tablet)
