@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 
@@ -15,13 +16,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _showPrivatePosts = false;
   String _selectedPostType = 'Text Post';
-  final TextEditingController _contentController = TextEditingController();
+  late QuillController _quillController;
   XFile? _selectedFile;
   final ImagePicker _picker = ImagePicker();
 
   @override
+  void initState() {
+    super.initState();
+    _quillController = QuillController.basic();
+  }
+
+  @override
   void dispose() {
-    _contentController.dispose();
+    _quillController.dispose();
     super.dispose();
   }
 
@@ -119,9 +126,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _submitPost() async {
-    final content = _contentController.text.trim();
+    final plainText = _quillController.document.toPlainText().trim();
 
-    if (_selectedPostType == 'Text Post' && content.isEmpty) {
+    if (_selectedPostType == 'Text Post' && plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter some content'),
@@ -155,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
-      _contentController.clear();
+      _quillController.clear();
       _selectedFile = null;
     });
   }
@@ -241,6 +248,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     ];
+  }
+
+  Widget _buildToolbarButton(
+      IconData icon, String tooltip, VoidCallback onPressed) {
+    return IconButton(
+      icon: Icon(icon, size: 20),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    );
   }
 
   IconData _getPostTypeIcon(String postType) {
@@ -356,16 +374,83 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            TextField(
-                              controller: _contentController,
-                              maxLines: 4,
-                              minLines: 2,
-                              decoration: InputDecoration(
-                                hintText: 'What\'s on your mind?',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            // Rich Text Editor Toolbar (Custom)
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  _buildToolbarButton(Icons.format_bold, 'Bold',
+                                      () {
+                                    _quillController
+                                        .formatSelection(Attribute.bold);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_italic, 'Italic', () {
+                                    _quillController
+                                        .formatSelection(Attribute.italic);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_underlined, 'Underline', () {
+                                    _quillController
+                                        .formatSelection(Attribute.underline);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_strikethrough, 'Strike', () {
+                                    _quillController.formatSelection(
+                                        Attribute.strikeThrough);
+                                  }),
+                                  const VerticalDivider(),
+                                  _buildToolbarButton(
+                                      Icons.format_align_left, 'Left', () {
+                                    _quillController.formatSelection(
+                                        Attribute.leftAlignment);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_align_center, 'Center', () {
+                                    _quillController.formatSelection(
+                                        Attribute.centerAlignment);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_align_right, 'Right', () {
+                                    _quillController.formatSelection(
+                                        Attribute.rightAlignment);
+                                  }),
+                                  const VerticalDivider(),
+                                  _buildToolbarButton(
+                                      Icons.format_list_bulleted, 'Bullets',
+                                      () {
+                                    _quillController
+                                        .formatSelection(Attribute.ul);
+                                  }),
+                                  _buildToolbarButton(
+                                      Icons.format_list_numbered, 'Numbers',
+                                      () {
+                                    _quillController
+                                        .formatSelection(Attribute.ol);
+                                  }),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Rich Text Editor
+                            Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Theme.of(context).dividerColor,
                                 ),
-                                contentPadding: const EdgeInsets.all(16),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: QuillEditor.basic(
+                                controller: _quillController,
                               ),
                             ),
                             const SizedBox(height: 12),

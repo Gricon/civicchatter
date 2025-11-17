@@ -35,6 +35,9 @@ dependencies:
   
   # Image processing (for cartoon filter)
   image: ^4.1.3
+  
+  # Rich text editor
+  flutter_quill: ^11.5.0
 
 dev_dependencies:
   flutter_test:
