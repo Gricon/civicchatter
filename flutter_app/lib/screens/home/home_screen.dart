@@ -840,35 +840,6 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: CivicChatterAppBar(
           title: 'Home',
           showBackButton: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // TODO: Navigate to notifications or show notifications panel
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Notifications feature coming soon!')),
-                );
-              },
-              tooltip: 'Notifications',
-            ),
-            IconButton(
-              icon: const Icon(Icons.message_outlined),
-              onPressed: () {
-                // TODO: Navigate to messages or show message center
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Messages feature coming soon!')),
-                );
-              },
-              tooltip: 'Messages',
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _handleLogout,
-              tooltip: 'Logout',
-            ),
-          ],
         ),
         drawer: isMobile ? const AppDrawer() : null,
         body: LayoutBuilder(
