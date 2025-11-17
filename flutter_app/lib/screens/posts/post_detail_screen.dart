@@ -535,9 +535,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             .currentUser?.id)
                                       IconButton(
                                         icon: const Icon(Icons.more_vert,
-                                            size: 20),
-                                        padding: EdgeInsets.zero,
+                                            size: 24),
+                                        padding: const EdgeInsets.all(8),
                                         constraints: const BoxConstraints(),
+                                        tooltip: 'Report or Block',
                                         onPressed: () {
                                           showDialog(
                                             context: context,
