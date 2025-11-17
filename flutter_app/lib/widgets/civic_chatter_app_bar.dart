@@ -134,7 +134,7 @@ class CivicChatterAppBar extends StatelessWidget
         // Page Title
         AppBar(
           title: titleWidget ?? Text(title),
-          automaticallyImplyLeading: false,
+          automaticallyImplyLeading: isMobile, // Show hamburger menu on mobile
           centerTitle: true,
         ),
       ],
