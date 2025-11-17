@@ -34,6 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
       {}; // postId -> {reactionType -> count}
   Map<String, Set<String>> _userReactions =
       {}; // postId -> Set of reaction keys (up to 2)
+  Map<String, Map<String, List<Map<String, dynamic>>>> _reactionDetails =
+      {}; // postId -> {reactionType -> [user details]}
 
   // Filter and sort options
   String _sortBy = 'newest'; // newest, oldest, popular
@@ -168,21 +170,25 @@ class _HomeScreenState extends State<HomeScreen> {
       final userId = supabase.auth.currentUser?.id;
       final postIds = _posts.map((p) => p['id']).toList();
 
-      // Load all reactions for these posts (including custom_emoji)
+      // Load all reactions for these posts with user profile information
       final reactionsResponse = await supabase
           .from('reactions')
-          .select('post_id, reaction_type, custom_emoji, user_id')
+          .select(
+              'post_id, reaction_type, custom_emoji, user_id, profiles_public(handle, display_name)')
           .inFilter('post_id', postIds);
 
       // Process reactions
       final Map<String, Map<String, int>> reactionCounts = {};
       final Map<String, Set<String>> userReactions = {};
+      final Map<String, Map<String, List<Map<String, dynamic>>>>
+          reactionDetails = {};
 
       for (var reaction in reactionsResponse) {
         final postId = reaction['post_id'];
         final reactionType = reaction['reaction_type'];
         final customEmoji = reaction['custom_emoji'];
         final reactionUserId = reaction['user_id'];
+        final profile = reaction['profiles_public'];
 
         // Use custom emoji as the type if it's a custom reaction
         final effectiveType = reactionType == 'custom' && customEmoji != null
@@ -195,6 +201,19 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         reactionCounts[postId]![effectiveType] =
             (reactionCounts[postId]![effectiveType] ?? 0) + 1;
+
+        // Store reaction details with user info
+        if (!reactionDetails.containsKey(postId)) {
+          reactionDetails[postId] = {};
+        }
+        if (!reactionDetails[postId]!.containsKey(effectiveType)) {
+          reactionDetails[postId]![effectiveType] = [];
+        }
+        reactionDetails[postId]![effectiveType]!.add({
+          'user_id': reactionUserId,
+          'handle': profile?['handle'] ?? 'Unknown',
+          'display_name': profile?['display_name'] ?? 'Unknown User',
+        });
 
         // Track user's own reactions (can have up to 2)
         if (userId != null && reactionUserId == userId) {
@@ -209,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _postReactions = reactionCounts;
           _userReactions = userReactions;
+          _reactionDetails = reactionDetails;
         });
       }
     } catch (e) {
@@ -1666,7 +1686,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           const SizedBox(height: 12),
 
                                           // Reaction Bar
-                                          _buildReactionBar(post['id']),
+                                          _buildReactionBar(post['id'],
+                                              post['is_private'] ?? false),
 
                                           const SizedBox(height: 8),
                                           Row(
@@ -2130,9 +2151,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$formattedDate $timezone';
   }
 
-  Widget _buildReactionBar(String postId) {
+  Widget _buildReactionBar(String postId, bool isPrivatePost) {
     final reactions = _postReactions[postId] ?? {};
     final userReactions = _userReactions[postId] ?? {};
+    final details = _reactionDetails[postId] ?? {};
 
     final reactionButtons = [
       {'type': 'like', 'emoji': '👍', 'label': 'Like'},
@@ -2200,46 +2222,76 @@ class _HomeScreenState extends State<HomeScreen> {
               final label = reaction['label'] as String;
               final count = reactions[type] ?? 0;
               final isSelected = userReactions.contains(type);
+              final users = details[type] ?? [];
+
+              // Build tooltip text showing who reacted
+              String tooltip = '';
+              if (users.isNotEmpty) {
+                final names = users
+                    .map((u) {
+                      // Use display_name for private posts, handle for public posts
+                      return isPrivatePost
+                          ? u['display_name']
+                          : '@${u['handle']}';
+                    })
+                    .take(5)
+                    .join(', ');
+                tooltip = users.length > 5
+                    ? '$names, and ${users.length - 5} more'
+                    : names;
+              }
 
               return PopupMenuItem<String>(
                 value: type,
-                child: Row(
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(label)),
-                    if (count > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          count.toString(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
+                child: Tooltip(
+                  message: tooltip.isNotEmpty ? tooltip : '',
+                  waitDuration: const Duration(milliseconds: 500),
+                  child: Row(
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(label)),
+                      if (count > 0) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _showReactionUsers(
+                                postId, type, emoji, label, isPrivatePost);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              count.toString(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
+                      if (isSelected) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.check,
+                          size: 18,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ],
                     ],
-                    if (isSelected) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.check,
-                        size: 18,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               );
             }).toList(),
@@ -2366,6 +2418,53 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  void _showReactionUsers(String postId, String reactionType, String emoji,
+      String label, bool isPrivatePost) {
+    final users = _reactionDetails[postId]?[reactionType] ?? [];
+
+    if (users.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(label)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final user = users[index];
+              // Use display_name for private posts, handle for public posts
+              final displayText =
+                  isPrivatePost ? user['display_name'] : '@${user['handle']}';
+
+              return ListTile(
+                leading: CircleAvatar(
+                  child: Text(displayText[0].toUpperCase()),
+                ),
+                title: Text(displayText),
+                contentPadding: EdgeInsets.zero,
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 

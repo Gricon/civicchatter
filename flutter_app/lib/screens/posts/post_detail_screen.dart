@@ -23,6 +23,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   bool _isSubmitting = false;
   Map<String, int> _reactions = {}; // reactionType -> count
   Set<String> _userReactions = {}; // user's current reactions (up to 2)
+  Map<String, List<Map<String, dynamic>>> _reactionDetails =
+      {}; // reactionType -> [user details]
   String? _replyingToCommentId; // Track which comment is being replied to
   String? _replyingToUsername; // Track username being replied to
 
@@ -84,20 +86,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final userId = supabase.auth.currentUser?.id;
       final postId = widget.post['id'];
 
-      // Load all reactions for this post (including custom_emoji)
+      // Load all reactions for this post with user profile information
       final reactionsResponse = await supabase
           .from('reactions')
-          .select('reaction_type, custom_emoji, user_id')
+          .select(
+              'reaction_type, custom_emoji, user_id, profiles_public(handle, display_name)')
           .eq('post_id', postId);
 
       // Process reactions
       final Map<String, int> reactionCounts = {};
       final Set<String> userReactions = {};
+      final Map<String, List<Map<String, dynamic>>> reactionDetails = {};
 
       for (var reaction in reactionsResponse) {
         final reactionType = reaction['reaction_type'];
         final customEmoji = reaction['custom_emoji'];
         final reactionUserId = reaction['user_id'];
+        final profile = reaction['profiles_public'];
 
         // Use custom emoji as the type if it's a custom reaction
         final effectiveType = reactionType == 'custom' && customEmoji != null
@@ -107,6 +112,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         // Count reactions
         reactionCounts[effectiveType] =
             (reactionCounts[effectiveType] ?? 0) + 1;
+
+        // Store reaction details with user info
+        if (!reactionDetails.containsKey(effectiveType)) {
+          reactionDetails[effectiveType] = [];
+        }
+        reactionDetails[effectiveType]!.add({
+          'user_id': reactionUserId,
+          'handle': profile?['handle'] ?? 'Unknown',
+          'display_name': profile?['display_name'] ?? 'Unknown User',
+        });
 
         // Track user's own reactions (can have up to 2)
         if (userId != null && reactionUserId == userId) {
@@ -118,6 +133,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         setState(() {
           _reactions = reactionCounts;
           _userReactions = userReactions;
+          _reactionDetails = reactionDetails;
         });
       }
     } catch (e) {
@@ -742,23 +758,29 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     Expanded(child: Text(label)),
                     if (count > 0) ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          count.toString(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showReactionUsers(type, emoji, label);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            count.toString(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : Colors.black87,
+                            ),
                           ),
                         ),
                       ),
@@ -898,6 +920,53 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  void _showReactionUsers(String reactionType, String emoji, String label) {
+    final isPrivatePost = widget.post['is_private'] ?? false;
+    final users = _reactionDetails[reactionType] ?? [];
+
+    if (users.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(label)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final user = users[index];
+              // Use display_name for private posts, handle for public posts
+              final displayText =
+                  isPrivatePost ? user['display_name'] : '@${user['handle']}';
+
+              return ListTile(
+                leading: CircleAvatar(
+                  child: Text(displayText[0].toUpperCase()),
+                ),
+                title: Text(displayText),
+                contentPadding: EdgeInsets.zero,
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 
