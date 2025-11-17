@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/civic_chatter_app_bar.dart';
 import '../../widgets/custom_background.dart';
 import '../../widgets/message_center.dart';
+import '../../widgets/notifications_panel.dart';
 import '../posts/post_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -41,6 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // Message center resizing
   double _messageCenterWidth = 300.0;
   bool _isResizing = false;
+
+  // Notifications panel resizing
+  double _notificationsPanelWidth = 280.0;
+  bool _isResizingNotifications = false;
 
   @override
   void initState() {
@@ -845,12 +850,55 @@ class _HomeScreenState extends State<HomeScreen> {
             // Responsive: constrain max width on large screens (web/tablet)
             final isLargeScreen = constraints.maxWidth > 900;
             final showMessageCenter = constraints.maxWidth > 1000;
+            final showNotifications = constraints.maxWidth > 1200;
             final maxWidth = isLargeScreen ? 800.0 : double.infinity;
             final horizontalPadding = isLargeScreen ? 24.0 : 16.0;
 
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Notifications panel
+                if (showNotifications) ...[
+                  SizedBox(
+                    width: _notificationsPanelWidth,
+                    child: const NotificationsPanel(),
+                  ),
+                  // Draggable divider for notifications
+                  MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn,
+                    child: GestureDetector(
+                      onHorizontalDragStart: (_) {
+                        setState(() => _isResizingNotifications = true);
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          _notificationsPanelWidth =
+                              (_notificationsPanelWidth + details.delta.dx)
+                                  .clamp(200.0, 400.0);
+                        });
+                      },
+                      onHorizontalDragEnd: (_) {
+                        setState(() => _isResizingNotifications = false);
+                      },
+                      child: Container(
+                        width: 8,
+                        color: _isResizingNotifications
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.5)
+                            : Colors.transparent,
+                        child: Center(
+                          child: Container(
+                            width: 2,
+                            color: Theme.of(context).dividerColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                // Posts feed
                 Expanded(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
