@@ -131,25 +131,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (userId == null) return;
 
       if (_userReaction == reactionType) {
-        // Remove reaction
+        // Remove reaction (clicking the same one again)
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
             .eq('user_id', userId);
-      } else if (_userReaction != null) {
-        // Update reaction
-        await supabase
-            .from('reactions')
-            .update({'reaction_type': reactionType})
-            .eq('post_id', postId)
-            .eq('user_id', userId);
       } else {
-        // Add new reaction
+        // Delete existing reaction first if any, then insert new one
+        // This avoids update issues with custom_emoji field
+        if (_userReaction != null) {
+          await supabase
+              .from('reactions')
+              .delete()
+              .eq('post_id', postId)
+              .eq('user_id', userId);
+        }
+
+        // Insert new reaction
         await supabase.from('reactions').insert({
           'post_id': postId,
           'user_id': userId,
           'reaction_type': reactionType,
+          'custom_emoji':
+              null, // Ensure custom_emoji is null for standard reactions
         });
       }
 
@@ -869,22 +874,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       if (userId == null) return;
 
-      // If user already has a reaction, remove it first
-      if (_userReaction != null) {
+      final customKey = 'custom_$emoji';
+
+      // If clicking the same custom emoji, remove it
+      if (_userReaction == customKey) {
         await supabase
             .from('reactions')
             .delete()
             .eq('post_id', postId)
             .eq('user_id', userId);
-      }
+      } else {
+        // Delete existing reaction first if any
+        if (_userReaction != null) {
+          await supabase
+              .from('reactions')
+              .delete()
+              .eq('post_id', postId)
+              .eq('user_id', userId);
+        }
 
-      // Add custom reaction
-      await supabase.from('reactions').insert({
-        'post_id': postId,
-        'user_id': userId,
-        'reaction_type': 'custom',
-        'custom_emoji': emoji,
-      });
+        // Insert new custom reaction
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': 'custom',
+          'custom_emoji': emoji,
+        });
+      }
 
       // Reload reactions
       await _loadReactions();
