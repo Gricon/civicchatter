@@ -127,7 +127,6 @@ class CivicChatterAppBar extends StatelessWidget
                     ),
                   ),
                 ),
-                if (actions != null) ...actions!,
               ],
             ),
           ),
