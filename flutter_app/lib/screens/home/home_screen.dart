@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _showPrivatePosts = false;
   String _selectedPostType = 'Text Post';
+  bool _isPrivatePost = false; // Privacy toggle for new posts
   QuillController? _quillController;
   XFile? _selectedFile;
   final ImagePicker _picker = ImagePicker();
@@ -261,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'content': plainText,
         'media_url': _selectedFile?.path,
         'media_type': _selectedPostType,
-        'is_private': _showPrivatePosts,
+        'is_private': _isPrivatePost,
       }).select();
 
       debugPrint('Insert response: $response');
@@ -270,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${_showPrivatePosts ? "Private" : "Public"} post created successfully!'),
+                '${_isPrivatePost ? "Private" : "Public"} post created successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -279,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _quillController?.clear();
         _selectedFile = null;
+        _isPrivatePost = false; // Reset privacy toggle after posting
       });
 
       // Reload posts to show the new one
@@ -626,6 +628,51 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             if (_selectedFile != null)
                               const SizedBox(height: 12),
+                            // Privacy Toggle
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Theme.of(context).dividerColor,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _isPrivatePost ? Icons.lock : Icons.public,
+                                    size: 20,
+                                    color: _isPrivatePost
+                                        ? Colors.orange
+                                        : Colors.green,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _isPrivatePost
+                                          ? 'Private Post'
+                                          : 'Public Post',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: _isPrivatePost,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _isPrivatePost = value;
+                                      });
+                                    },
+                                    activeColor: Colors.orange,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
                             // Responsive button layout
                             LayoutBuilder(
                               builder: (context, constraints) {
