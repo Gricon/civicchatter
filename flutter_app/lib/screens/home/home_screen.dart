@@ -943,7 +943,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Calculate sidebar dimensions: 20px from left edge, 10px gap from posts
             const leftEdgeGap = 20.0;
-            const gap = 10.0;
+            const gap = 20.0;
             final sidebarWidth =
                 (constraints.maxWidth - maxWidth) / 2 - leftEdgeGap - gap;
             const sidebarLeft = leftEdgeGap;
