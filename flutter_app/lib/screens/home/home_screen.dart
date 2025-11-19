@@ -1857,7 +1857,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Left side tools panel
                 if (showToolsPanel)
                   Positioned(
-                    left: 20,
+                    left: 10,
                     top: 20,
                     child: SizedBox(
                       width: 340,
