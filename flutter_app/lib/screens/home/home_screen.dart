@@ -941,6 +941,12 @@ class _HomeScreenState extends State<HomeScreen> {
             const maxWidth = 800.0;
             final showToolsPanel = constraints.maxWidth > 1200;
 
+            // Calculate left position: center - half of post width - sidebar width - gap
+            final sidebarWidth = 340.0;
+            final gap = 10.0;
+            final sidebarLeft =
+                (constraints.maxWidth - maxWidth) / 2 - sidebarWidth - gap;
+
             return Stack(
               children: [
                 // Posts feed - always centered on screen
@@ -1857,7 +1863,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Left side tools panel
                 if (showToolsPanel)
                   Positioned(
-                    left: 10,
+                    left: sidebarLeft,
                     top: 20,
                     child: SizedBox(
                       width: 340,
