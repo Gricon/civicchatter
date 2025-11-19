@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
@@ -20,12 +20,12 @@ class StorageService {
         fileBytes = await ImageProcessingService.cartoonizeImage(fileBytes);
       } catch (e) {
         // If cartoonization fails, use original image
-        print('Cartoonization failed, using original image: $e');
+        debugPrint('Cartoonization failed, using original image: $e');
         fileBytes = await file.readAsBytes();
       }
     }
 
-    final fileExt = 'png'; // Always use PNG for processed images
+    const fileExt = 'png'; // Always use PNG for processed images
     final fileName = '$userId.$fileExt';
     final filePath = 'avatars/$fileName';
 

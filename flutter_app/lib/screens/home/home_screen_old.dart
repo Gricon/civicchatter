@@ -289,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.green),
                         ),
@@ -329,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
-                            value: _selectedPostType,
+                            initialValue: _selectedPostType,
                             decoration: InputDecoration(
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -343,11 +343,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 size: 20,
                               ),
                             ),
-                            items: [
+                            items: const [
                               DropdownMenuItem(
                                 value: 'Text Post',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.text_fields, size: 20),
                                     SizedBox(width: 8),
                                     Text('Text Post'),
@@ -357,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               DropdownMenuItem(
                                 value: 'Video',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.video_library, size: 20),
                                     SizedBox(width: 8),
                                     Text('Video'),
@@ -367,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               DropdownMenuItem(
                                 value: 'Livestream',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.videocam, size: 20),
                                     SizedBox(width: 8),
                                     Text('Livestream'),
@@ -377,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               DropdownMenuItem(
                                 value: 'Photo',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.photo_library, size: 20),
                                     SizedBox(width: 8),
                                     Text('Photo'),
@@ -387,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               DropdownMenuItem(
                                 value: 'File',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.insert_drive_file, size: 20),
                                     SizedBox(width: 8),
                                     Text('File'),
@@ -397,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               DropdownMenuItem(
                                 value: 'Document',
                                 child: Row(
-                                  children: const [
+                                  children: [
                                     Icon(Icons.description, size: 20),
                                     SizedBox(width: 8),
                                     Text('Document'),

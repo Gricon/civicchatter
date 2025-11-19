@@ -117,7 +117,7 @@ class ImageProcessingService {
         if (edgeValue > edgeThreshold) {
           // Darken the pixel for edges
           final basePixel = result.getPixel(x, y);
-          final factor = 0.3; // Darken factor
+          const factor = 0.3; // Darken factor
           final newR = (basePixel.r * factor).round();
           final newG = (basePixel.g * factor).round();
           final newB = (basePixel.b * factor).round();

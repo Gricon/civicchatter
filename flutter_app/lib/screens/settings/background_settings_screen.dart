@@ -45,9 +45,10 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('background_type', _backgroundType);
-    await prefs.setInt('background_solid_color', _solidColor.value);
-    await prefs.setInt('background_gradient_start', _gradientStartColor.value);
-    await prefs.setInt('background_gradient_end', _gradientEndColor.value);
+    await prefs.setInt('background_solid_color', _solidColor.toARGB32());
+    await prefs.setInt(
+        'background_gradient_start', _gradientStartColor.toARGB32());
+    await prefs.setInt('background_gradient_end', _gradientEndColor.toARGB32());
     await prefs.setDouble('background_gradient_angle', _gradientAngle);
     if (_backgroundImagePath != null) {
       await prefs.setString('background_image_path', _backgroundImagePath!);
@@ -171,7 +172,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
 
   Widget _buildColorOption(
       Color color, Color currentColor, Function(Color) onColorChanged) {
-    final isSelected = color.value == currentColor.value;
+    final isSelected = color.toARGB32() == currentColor.toARGB32();
     return InkWell(
       onTap: () => onColorChanged(color),
       child: Container(
@@ -205,7 +206,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
         height: 50,
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Colors.grey[100],
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -298,7 +299,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CivicChatterAppBar(
+      appBar: const CivicChatterAppBar(
         title: 'Background Settings',
         showBackButton: true,
       ),
@@ -322,47 +323,37 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
           ),
           const SizedBox(height: 16),
           Card(
-            child: Column(
-              children: [
-                RadioListTile<String>(
-                  value: 'color',
-                  groupValue: _backgroundType,
-                  onChanged: (value) {
-                    setState(() {
-                      _backgroundType = value!;
-                    });
-                  },
-                  title: const Text('Solid Color'),
-                  subtitle: const Text('Single color background'),
-                  secondary: const Icon(Icons.palette),
-                ),
-                const Divider(height: 1),
-                RadioListTile<String>(
-                  value: 'gradient',
-                  groupValue: _backgroundType,
-                  onChanged: (value) {
-                    setState(() {
-                      _backgroundType = value!;
-                    });
-                  },
-                  title: const Text('Gradient'),
-                  subtitle: const Text('Two-color gradient background'),
-                  secondary: const Icon(Icons.gradient),
-                ),
-                const Divider(height: 1),
-                RadioListTile<String>(
-                  value: 'image',
-                  groupValue: _backgroundType,
-                  onChanged: (value) {
-                    setState(() {
-                      _backgroundType = value!;
-                    });
-                  },
-                  title: const Text('Image'),
-                  subtitle: const Text('Upload your own background image'),
-                  secondary: const Icon(Icons.image),
-                ),
-              ],
+            child: RadioGroup<String>(
+              groupValue: _backgroundType,
+              onChanged: (value) {
+                setState(() {
+                  _backgroundType = value!;
+                });
+              },
+              child: const Column(
+                children: [
+                  RadioListTile<String>(
+                    value: 'color',
+                    title: Text('Solid Color'),
+                    subtitle: Text('Single color background'),
+                    secondary: Icon(Icons.palette),
+                  ),
+                  Divider(height: 1),
+                  RadioListTile<String>(
+                    value: 'gradient',
+                    title: Text('Gradient'),
+                    subtitle: Text('Two-color gradient background'),
+                    secondary: Icon(Icons.gradient),
+                  ),
+                  Divider(height: 1),
+                  RadioListTile<String>(
+                    value: 'image',
+                    title: Text('Image'),
+                    subtitle: Text('Upload your own background image'),
+                    secondary: Icon(Icons.image),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -489,6 +480,7 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('background_type');
               await prefs.remove('background_solid_color');
@@ -496,6 +488,8 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
               await prefs.remove('background_gradient_end');
               await prefs.remove('background_gradient_angle');
               await prefs.remove('background_image_path');
+
+              if (!mounted) return;
 
               setState(() {
                 _backgroundType = 'color';
@@ -506,14 +500,12 @@ class _BackgroundSettingsScreenState extends State<BackgroundSettingsScreen> {
                 _backgroundImagePath = null;
               });
 
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Background reset to default'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
-              }
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Background reset to default'),
+                  backgroundColor: Colors.blue,
+                ),
+              );
             },
             icon: const Icon(Icons.restore),
             label: const Text('Reset to Default'),

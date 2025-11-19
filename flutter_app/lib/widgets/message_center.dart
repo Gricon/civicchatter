@@ -147,8 +147,9 @@ class _MessageCenterState extends State<MessageCenter> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty || _selectedConversation == null)
+    if (_messageController.text.trim().isEmpty || _selectedConversation == null) {
       return;
+    }
 
     try {
       final userId = _supabase.auth.currentUser?.id;
@@ -423,7 +424,7 @@ class _MessageCenterState extends State<MessageCenter> {
                                       .primaryContainer
                                   : Theme.of(context)
                                       .colorScheme
-                                      .surfaceVariant,
+                                      .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(

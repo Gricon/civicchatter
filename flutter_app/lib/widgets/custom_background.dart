@@ -104,7 +104,7 @@ class _CustomBackgroundState extends State<CustomBackground> {
   Widget build(BuildContext context) {
     // If default, use theme colors
     if (_backgroundType == 'default' ||
-        _backgroundType == 'color' && _solidColor.value == 0xFFF5F5F5) {
+        _backgroundType == 'color' && _solidColor.toARGB32() == 0xFFF5F5F5) {
       return widget.child;
     }
 

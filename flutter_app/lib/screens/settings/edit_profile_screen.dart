@@ -174,7 +174,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     return Scaffold(
-      appBar: CivicChatterAppBar(
+      appBar: const CivicChatterAppBar(
         title: 'Edit Profile',
         showBackButton: true,
       ),

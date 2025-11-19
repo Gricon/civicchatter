@@ -1,6 +1,5 @@
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -49,15 +48,15 @@ class AppRouter {
       GoRoute(
         path: '/login',
         name: 'login',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const LoginScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: LoginScreen(),
         ),
       ),
       GoRoute(
         path: '/signup',
         name: 'signup',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const SignupScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SignupScreen(),
         ),
       ),
       GoRoute(
@@ -71,15 +70,15 @@ class AppRouter {
       GoRoute(
         path: '/home',
         name: 'home',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const HomeScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: HomeScreen(),
         ),
       ),
       GoRoute(
         path: '/profile',
         name: 'profile',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const PrivateProfileScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: PrivateProfileScreen(),
         ),
       ),
       GoRoute(
@@ -95,15 +94,15 @@ class AppRouter {
       GoRoute(
         path: '/debates',
         name: 'debates',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const DebatesScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: DebatesScreen(),
         ),
       ),
       GoRoute(
         path: '/friends',
         name: 'friends',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const FriendsScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: FriendsScreen(),
         ),
       ),
       GoRoute(
@@ -119,29 +118,29 @@ class AppRouter {
       GoRoute(
         path: '/settings',
         name: 'settings',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const SettingsScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SettingsScreen(),
         ),
       ),
       GoRoute(
         path: '/settings/edit-profile',
         name: 'edit-profile',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const EditProfileScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: EditProfileScreen(),
         ),
       ),
       GoRoute(
         path: '/settings/background',
         name: 'background-settings',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const BackgroundSettingsScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: BackgroundSettingsScreen(),
         ),
       ),
       GoRoute(
         path: '/debug',
         name: 'debug',
-        pageBuilder: (context, state) => NoTransitionPage(
-          child: const DebugScreen(),
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: DebugScreen(),
         ),
       ),
     ],

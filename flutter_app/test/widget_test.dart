@@ -13,6 +13,6 @@ void main() {
   });
 
   test('String concatenation test', () {
-    expect('Civic' + 'Chatter', equals('CivicChatter'));
+    expect('Civic' 'Chatter', equals('CivicChatter'));
   });
 }

@@ -57,8 +57,8 @@ class ModerationService {
       'description': description,
     });
 
-    // TODO: In production, trigger an Edge Function to send email to law enforcement
-    // For now, admins can query the threat_reports table
+    // Note: In production, trigger an Edge Function to send email to law enforcement.
+    // For now, admins can query the threat_reports table.
   }
 
   // Get list of blocked users

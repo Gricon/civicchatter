@@ -25,7 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return CustomBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: CivicChatterAppBar(
+        appBar: const CivicChatterAppBar(
           title: 'Settings',
           showBackButton: true,
         ),
@@ -171,6 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               variant: ButtonVariant.outlined,
               icon: Icons.logout,
               onPressed: () async {
+                final router = GoRouter.of(context);
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -189,11 +190,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
 
-                if (confirm == true && mounted) {
+                if (confirm == true) {
+                  if (!mounted) return;
                   await authProvider.signOut();
-                  if (mounted) {
-                    context.go('/login');
-                  }
+                  if (!mounted) return;
+                  router.go('/login');
                 }
               },
             ),

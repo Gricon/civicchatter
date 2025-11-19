@@ -100,19 +100,23 @@ class _ReportBlockDialogState extends State<ReportBlockDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Action selection
-            RadioListTile<String>(
-              title: const Text('Block User'),
-              subtitle: const Text('Hide all content from this user'),
-              value: 'block',
+            RadioGroup<String>(
               groupValue: _selectedAction,
               onChanged: (value) => setState(() => _selectedAction = value!),
-            ),
-            RadioListTile<String>(
-              title: const Text('Report Threat'),
-              subtitle: const Text('Report to law enforcement'),
-              value: 'report',
-              groupValue: _selectedAction,
-              onChanged: (value) => setState(() => _selectedAction = value!),
+              child: const Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text('Block User'),
+                    subtitle: Text('Hide all content from this user'),
+                    value: 'block',
+                  ),
+                  RadioListTile<String>(
+                    title: Text('Report Threat'),
+                    subtitle: Text('Report to law enforcement'),
+                    value: 'report',
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -124,7 +128,7 @@ class _ReportBlockDialogState extends State<ReportBlockDialog> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _threatType,
+                initialValue: _threatType,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   isDense: true,

@@ -18,7 +18,7 @@ class _DebatesScreenState extends State<DebatesScreen> {
     return CustomBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: CivicChatterAppBar(
+        appBar: const CivicChatterAppBar(
           title: 'Debates',
           showBackButton: false,
         ),

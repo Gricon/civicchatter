@@ -263,7 +263,7 @@ class _NotificationsPanelState extends State<NotificationsPanel> {
                                       decoration: BoxDecoration(
                                         color: Theme.of(context)
                                             .colorScheme
-                                            .surfaceVariant,
+                                            .surfaceContainerHighest,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(

@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
         postsResponse =
             await query.order('created_at', ascending: true).limit(50);
       } else {
-        // popular - TODO: Add like/comment count sorting when those features are added
+        // popular - Note: Add like/comment count sorting when those features are added
         postsResponse =
             await query.order('created_at', ascending: false).limit(50);
       }
@@ -938,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: LayoutBuilder(
           builder: (context, constraints) {
             // Responsive: constrain max width on large screens (web/tablet)
-            final maxWidth = 800.0;
+            const maxWidth = 800.0;
             final showToolsPanel = constraints.maxWidth > 1200;
 
             return Stack(
@@ -951,7 +951,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       vertical: 16.0,
                     ),
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      constraints: const BoxConstraints(maxWidth: maxWidth),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1054,7 +1054,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.1),
+                                        color:
+                                            Colors.green.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(color: Colors.green),
                                       ),
@@ -1132,7 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               _isPrivatePost = value;
                                             });
                                           },
-                                          activeColor: Colors.orange,
+                                          activeThumbColor: Colors.orange,
                                         ),
                                       ],
                                     ),
@@ -1151,7 +1152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               CrossAxisAlignment.stretch,
                                           children: [
                                             DropdownButtonFormField<String>(
-                                              value: _selectedPostType,
+                                              initialValue: _selectedPostType,
                                               decoration: InputDecoration(
                                                 border: OutlineInputBorder(
                                                   borderRadius:
@@ -1213,7 +1214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               flex: 2,
                                               child: DropdownButtonFormField<
                                                   String>(
-                                                value: _selectedPostType,
+                                                initialValue: _selectedPostType,
                                                 decoration: InputDecoration(
                                                   border: OutlineInputBorder(
                                                     borderRadius:
@@ -1323,7 +1324,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           const SizedBox(width: 4),
                                           Flexible(
                                             child: Text(
-                                              '${_filterBy == 'all' ? 'All' : _filterBy == 'public' ? 'Public' : 'Private'}',
+                                              _filterBy == 'all'
+                                                  ? 'All'
+                                                  : _filterBy == 'public'
+                                                      ? 'Public'
+                                                      : 'Private',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,
@@ -1502,7 +1507,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           const SizedBox(width: 4),
                                           Flexible(
                                             child: Text(
-                                              '${_sortBy == 'newest' ? 'Newest' : _sortBy == 'oldest' ? 'Oldest' : 'Popular'}',
+                                              _sortBy == 'newest'
+                                                  ? 'Newest'
+                                                  : _sortBy == 'oldest'
+                                                      ? 'Oldest'
+                                                      : 'Popular',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,
@@ -2347,7 +2356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             // Divider before custom reactions if any exist
             if (customReactions.isNotEmpty) const PopupMenuDivider(),
@@ -2399,7 +2408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
 
             // Divider before add custom option
             const PopupMenuDivider(),
@@ -2420,7 +2429,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: userReactions.isNotEmpty
-                  ? Theme.of(context).primaryColor.withOpacity(0.2)
+                  ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
                   : Theme.of(context).cardColor,
               border: Border.all(
                 color: userReactions.isNotEmpty
@@ -2698,6 +2707,8 @@ class _HomeScreenState extends State<HomeScreen> {
       {'type': 'angry', 'emoji': '😠', 'label': 'Angry'},
     ];
 
+    if (!mounted) return;
+
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2741,7 +2752,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       isCustom: isCustom);
                 },
               );
-            }).toList(),
+            }),
           ],
         ),
         actions: [

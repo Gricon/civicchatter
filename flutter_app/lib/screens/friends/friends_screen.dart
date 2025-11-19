@@ -45,8 +45,8 @@ class _FriendsScreenState extends State<FriendsScreen>
 
       if (userId == null) return;
 
-      // TODO: Load friends from database when friendships table is created
-      // For now, show empty state
+      // Note: Load friends from database when friendships table is created.
+      // For now, show empty state.
       setState(() {
         _friends = [];
         _pendingRequests = [];
