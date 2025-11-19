@@ -102,11 +102,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         try {
           final profilesResponse = await supabase
               .from('profiles_public')
-              .select('user_id, handle, display_name')
-              .inFilter('user_id', userIds);
+              .select('id, handle, display_name')
+              .inFilter('id', userIds);
 
           for (var profile in profilesResponse) {
-            userProfiles[profile['user_id']] = profile;
+            userProfiles[profile['id']] = profile;
           }
         } catch (profileError) {
           debugPrint('Error loading user profiles: $profileError');
