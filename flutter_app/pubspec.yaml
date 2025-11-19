@@ -53,6 +53,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # Add assets here
-  # assets:
-  #   - assets/images/
+  # Add fonts for emoji support
+  fonts:
+    - family: NotoColorEmoji
+      fonts:
+        - asset: assets/fonts/NotoColorEmoji.ttf

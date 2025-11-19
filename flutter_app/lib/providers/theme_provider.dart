@@ -69,18 +69,17 @@ class ThemeProvider with ChangeNotifier {
       scaffoldBackgroundColor:
           isDark ? const Color(0xFF0b1220) : const Color(0xFFF5F5F5),
       cardColor: isDark ? const Color(0xFF0f172a) : Colors.white,
-      textTheme: GoogleFonts.interTextTheme()
-          .apply(
-            bodyColor:
-                isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0f172a),
-            displayColor:
-                isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0f172a),
-          )
-          .copyWith(
-            bodyMedium: TextStyle(fontSize: _fontSize),
-            bodyLarge: TextStyle(fontSize: _fontSize + 2),
-            bodySmall: TextStyle(fontSize: _fontSize - 2),
-          ),
+      textTheme: GoogleFonts.interTextTheme().apply(
+        bodyColor: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0f172a),
+        displayColor:
+            isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0f172a),
+        fontFamilyFallback: const ['NotoColorEmoji'],
+      ).copyWith(
+        bodyMedium: TextStyle(
+            fontSize: _fontSize, fontFamilyFallback: const ['NotoColorEmoji']),
+        bodyLarge: TextStyle(fontSize: _fontSize + 2),
+        bodySmall: TextStyle(fontSize: _fontSize - 2),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark ? const Color(0xFF1f2937) : Colors.white,
