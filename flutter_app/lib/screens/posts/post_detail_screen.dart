@@ -99,13 +99,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       // Load profiles for these users
       Map<String, Map<String, dynamic>> userProfiles = {};
       if (userIds.isNotEmpty) {
-        final profilesResponse = await supabase
-            .from('profiles_public')
-            .select('user_id, handle, display_name')
-            .inFilter('user_id', userIds);
+        try {
+          final profilesResponse = await supabase
+              .from('profiles_public')
+              .select('user_id, handle, display_name')
+              .inFilter('user_id', userIds);
 
-        for (var profile in profilesResponse) {
-          userProfiles[profile['user_id']] = profile;
+          for (var profile in profilesResponse) {
+            userProfiles[profile['user_id']] = profile;
+          }
+        } catch (profileError) {
+          debugPrint('Error loading user profiles: $profileError');
+          // Continue without profiles - reactions will still work
         }
       }
 
