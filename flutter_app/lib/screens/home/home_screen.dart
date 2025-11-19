@@ -289,6 +289,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Add new reaction
         try {
+          debugPrint(
+              'Attempting to insert reaction: postId=$postId, userId=$userId, reactionType=$reactionType');
           await supabase.from('reactions').insert({
             'post_id': postId,
             'user_id': userId,
@@ -299,6 +301,8 @@ class _HomeScreenState extends State<HomeScreen> {
           // Reload to show updated state
           await _loadReactionsForPosts();
         } catch (insertError) {
+          debugPrint('Insert error details: $insertError');
+          debugPrint('Insert error type: ${insertError.runtimeType}');
           // If we get a constraint error, show the replace dialog
           if (insertError
               .toString()
