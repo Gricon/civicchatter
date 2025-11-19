@@ -266,6 +266,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .eq('post_id', postId)
           .eq('user_id', userId);
 
+      debugPrint(
+          'Current reactions for user $userId on post $postId: $currentReactions');
+      debugPrint('Attempting to add reaction: $reactionType');
+      debugPrint('Current reaction count: ${currentReactions.length}');
+
       final hasThisReaction = currentReactions.any((r) {
         final type = r['reaction_type'];
         return type == reactionType;
@@ -273,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Check if user already has this reaction
       if (hasThisReaction) {
+        debugPrint('Removing existing reaction: $reactionType');
         // Remove this specific reaction
         await supabase
             .from('reactions')
@@ -286,6 +292,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         // Check if user already has 2 reactions
         if (currentReactions.length >= 2) {
+          debugPrint(
+              'User already has ${currentReactions.length} reactions, showing replace dialog');
           // Ask which reaction to replace
           if (mounted) {
             await _showReplaceReactionDialog(postId, reactionType,
@@ -294,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return;
         }
 
+        debugPrint('Adding new reaction: $reactionType');
         // Add new reaction
         await supabase.from('reactions').insert({
           'post_id': postId,
