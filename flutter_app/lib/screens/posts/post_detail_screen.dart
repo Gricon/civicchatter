@@ -86,12 +86,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final userId = supabase.auth.currentUser?.id;
       final postId = widget.post['id'];
 
-      // Load all reactions for this post with user profile information
+      // Load all reactions for this post
       final reactionsResponse = await supabase
           .from('reactions')
-          .select(
-              'reaction_type, custom_emoji, user_id, profiles_public(handle, display_name)')
+          .select('reaction_type, custom_emoji, user_id')
           .eq('post_id', postId);
+
+      // Get unique user IDs from reactions
+      final userIds =
+          reactionsResponse.map((r) => r['user_id'] as String).toSet().toList();
+
+      // Load profiles for these users
+      Map<String, Map<String, dynamic>> userProfiles = {};
+      if (userIds.isNotEmpty) {
+        final profilesResponse = await supabase
+            .from('profiles_public')
+            .select('user_id, handle, display_name')
+            .inFilter('user_id', userIds);
+
+        for (var profile in profilesResponse) {
+          userProfiles[profile['user_id']] = profile;
+        }
+      }
 
       // Process reactions
       final Map<String, int> reactionCounts = {};
@@ -102,7 +118,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         final reactionType = reaction['reaction_type'];
         final customEmoji = reaction['custom_emoji'];
         final reactionUserId = reaction['user_id'];
-        final profile = reaction['profiles_public'];
+        final profile = userProfiles[reactionUserId];
 
         // Use custom emoji as the type if it's a custom reaction
         final effectiveType = reactionType == 'custom' && customEmoji != null

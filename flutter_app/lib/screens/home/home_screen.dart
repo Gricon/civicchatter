@@ -170,12 +170,28 @@ class _HomeScreenState extends State<HomeScreen> {
       final userId = supabase.auth.currentUser?.id;
       final postIds = _posts.map((p) => p['id']).toList();
 
-      // Load all reactions for these posts with user profile information
+      // Load all reactions for these posts
       final reactionsResponse = await supabase
           .from('reactions')
-          .select(
-              'post_id, reaction_type, custom_emoji, user_id, profiles_public(handle, display_name)')
+          .select('post_id, reaction_type, custom_emoji, user_id')
           .inFilter('post_id', postIds);
+
+      // Get unique user IDs from reactions
+      final userIds =
+          reactionsResponse.map((r) => r['user_id'] as String).toSet().toList();
+
+      // Load profiles for these users
+      Map<String, Map<String, dynamic>> userProfiles = {};
+      if (userIds.isNotEmpty) {
+        final profilesResponse = await supabase
+            .from('profiles_public')
+            .select('user_id, handle, display_name')
+            .inFilter('user_id', userIds);
+
+        for (var profile in profilesResponse) {
+          userProfiles[profile['user_id']] = profile;
+        }
+      }
 
       // Process reactions
       final Map<String, Map<String, int>> reactionCounts = {};
@@ -188,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final reactionType = reaction['reaction_type'];
         final customEmoji = reaction['custom_emoji'];
         final reactionUserId = reaction['user_id'];
-        final profile = reaction['profiles_public'];
+        final profile = userProfiles[reactionUserId];
 
         // Use custom emoji as the type if it's a custom reaction
         final effectiveType = reactionType == 'custom' && customEmoji != null
@@ -243,6 +259,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
+      // Reload reactions first to get current state from database
+      await _loadReactionsForPosts();
+
       final userReactions = _userReactions[postId] ?? {};
 
       // Check if user already has this reaction
@@ -254,34 +273,49 @@ class _HomeScreenState extends State<HomeScreen> {
             .eq('post_id', postId)
             .eq('user_id', userId)
             .eq('reaction_type', reactionType);
+
+        // Reload to show updated state
+        await _loadReactionsForPosts();
       } else {
         // Check if user already has 2 reactions
         if (userReactions.length >= 2) {
+          // Ask which reaction to replace
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('You can only have up to 2 reactions per post'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            await _showReplaceReactionDialog(postId, reactionType,
+                isCustom: false);
           }
           return;
         }
 
         // Add new reaction
-        await supabase.from('reactions').insert({
-          'post_id': postId,
-          'user_id': userId,
-          'reaction_type': reactionType,
-          'custom_emoji': null,
-        });
-      }
+        try {
+          await supabase.from('reactions').insert({
+            'post_id': postId,
+            'user_id': userId,
+            'reaction_type': reactionType,
+            'custom_emoji': null,
+          });
 
-      // Reload reactions
-      await _loadReactionsForPosts();
+          // Reload to show updated state
+          await _loadReactionsForPosts();
+        } catch (insertError) {
+          // If we get a constraint error, show the replace dialog
+          if (insertError
+              .toString()
+              .contains('can only have up to 2 reactions')) {
+            if (mounted) {
+              await _showReplaceReactionDialog(postId, reactionType,
+                  isCustom: false);
+            }
+            return;
+          }
+          rethrow;
+        }
+      }
     } catch (e) {
       debugPrint('Error toggling reaction: $e');
-      if (mounted) {
+      if (mounted &&
+          !e.toString().contains('can only have up to 2 reactions')) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating reaction: $e')),
         );
@@ -2576,6 +2610,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
+      // Reload reactions first to get current state from database
+      await _loadReactionsForPosts();
+
       final userReactions = _userReactions[postId] ?? {};
       final customKey = 'custom_$emoji';
 
@@ -2589,36 +2626,168 @@ class _HomeScreenState extends State<HomeScreen> {
             .eq('user_id', userId)
             .eq('reaction_type', 'custom')
             .eq('custom_emoji', emoji);
+
+        // Reload to show updated state
+        await _loadReactionsForPosts();
       } else {
         // Check if user already has 2 reactions
         if (userReactions.length >= 2) {
+          // Ask which reaction to replace
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('You can only have up to 2 reactions per post'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            await _showReplaceReactionDialog(postId, emoji, isCustom: true);
           }
           return;
         }
 
         // Add new custom reaction
+        try {
+          await supabase.from('reactions').insert({
+            'post_id': postId,
+            'user_id': userId,
+            'reaction_type': 'custom',
+            'custom_emoji': emoji,
+          });
+
+          // Reload to show updated state
+          await _loadReactionsForPosts();
+        } catch (insertError) {
+          // If we get a constraint error, show the replace dialog
+          if (insertError
+              .toString()
+              .contains('can only have up to 2 reactions')) {
+            if (mounted) {
+              await _showReplaceReactionDialog(postId, emoji, isCustom: true);
+            }
+            return;
+          }
+          rethrow;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error toggling custom reaction: $e');
+      if (mounted &&
+          !e.toString().contains('can only have up to 2 reactions')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating reaction: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showReplaceReactionDialog(String postId, String newReaction,
+      {required bool isCustom}) async {
+    final userReactions = _userReactions[postId] ?? {};
+    final reactionButtons = [
+      {'type': 'like', 'emoji': '👍', 'label': 'Like'},
+      {'type': 'love', 'emoji': '❤️', 'label': 'Love'},
+      {'type': 'laugh', 'emoji': '😂', 'label': 'Laugh'},
+      {'type': 'wow', 'emoji': '😮', 'label': 'Wow'},
+      {'type': 'sad', 'emoji': '😢', 'label': 'Sad'},
+      {'type': 'angry', 'emoji': '😠', 'label': 'Angry'},
+    ];
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Replace Reaction'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('You can only have 2 reactions per post.'),
+            const SizedBox(height: 16),
+            const Text('Which reaction would you like to replace?'),
+            const SizedBox(height: 16),
+            ...userReactions.map((reaction) {
+              String emoji;
+              String label;
+
+              if (reaction.startsWith('custom_')) {
+                emoji = reaction.substring(7);
+                label = 'Custom';
+              } else {
+                final reactionData = reactionButtons.firstWhere(
+                  (r) => r['type'] == reaction,
+                  orElse: () => {'emoji': '👍', 'label': 'Unknown'},
+                );
+                emoji = reactionData['emoji'] as String;
+                label = reactionData['label'] as String;
+              }
+
+              return ListTile(
+                leading: Text(emoji, style: const TextStyle(fontSize: 24)),
+                title: Text(label),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _replaceReaction(postId, reaction, newReaction,
+                      isCustom: isCustom);
+                },
+              );
+            }).toList(),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _replaceReaction(
+      String postId, String oldReaction, String newReaction,
+      {required bool isCustom}) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+
+      if (userId == null) return;
+
+      // Delete the old reaction
+      if (oldReaction.startsWith('custom_')) {
+        final oldEmoji = oldReaction.substring(7);
+        await supabase
+            .from('reactions')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .eq('reaction_type', 'custom')
+            .eq('custom_emoji', oldEmoji);
+      } else {
+        await supabase
+            .from('reactions')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .eq('reaction_type', oldReaction);
+      }
+
+      // Add the new reaction
+      if (isCustom) {
         await supabase.from('reactions').insert({
           'post_id': postId,
           'user_id': userId,
           'reaction_type': 'custom',
-          'custom_emoji': emoji,
+          'custom_emoji': newReaction,
+        });
+      } else {
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': newReaction,
+          'custom_emoji': null,
         });
       }
 
       // Reload reactions
       await _loadReactionsForPosts();
     } catch (e) {
-      debugPrint('Error toggling custom reaction: $e');
+      debugPrint('Error replacing reaction: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating reaction: $e')),
+          SnackBar(content: Text('Error replacing reaction: $e')),
         );
       }
     }
