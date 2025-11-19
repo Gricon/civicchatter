@@ -941,11 +941,12 @@ class _HomeScreenState extends State<HomeScreen> {
             const maxWidth = 800.0;
             final showToolsPanel = constraints.maxWidth > 1200;
 
-            // Calculate left position: center - half of post width - sidebar width - gap
-            final sidebarWidth = 340.0;
-            final gap = 10.0;
-            final sidebarLeft =
-                (constraints.maxWidth - maxWidth) / 2 - sidebarWidth - gap;
+            // Calculate sidebar dimensions: 20px from left edge, 10px gap from posts
+            const leftEdgeGap = 20.0;
+            const gap = 10.0;
+            final sidebarWidth =
+                (constraints.maxWidth - maxWidth) / 2 - leftEdgeGap - gap;
+            const sidebarLeft = leftEdgeGap;
 
             return Stack(
               children: [
@@ -1866,7 +1867,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     left: sidebarLeft,
                     top: 20,
                     child: SizedBox(
-                      width: 340,
+                      width: sidebarWidth,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
