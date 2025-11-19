@@ -1860,7 +1860,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     left: 20,
                     top: 20,
                     child: SizedBox(
-                      width: 280,
+                      width: 340,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
