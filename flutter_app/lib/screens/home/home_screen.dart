@@ -2672,7 +2672,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showReplaceReactionDialog(String postId, String newReaction,
       {required bool isCustom}) async {
-    final userReactions = _userReactions[postId] ?? {};
+    // Query database directly for current reactions
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id;
+
+    if (userId == null) return;
+
+    final currentReactions = await supabase
+        .from('reactions')
+        .select('reaction_type, custom_emoji')
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+
     final reactionButtons = [
       {'type': 'like', 'emoji': '👍', 'label': 'Like'},
       {'type': 'love', 'emoji': '❤️', 'label': 'Love'},
@@ -2694,20 +2705,26 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             const Text('Which reaction would you like to replace?'),
             const SizedBox(height: 16),
-            ...userReactions.map((reaction) {
+            ...currentReactions.map((reactionData) {
               String emoji;
               String label;
+              String reactionKey;
 
-              if (reaction.startsWith('custom_')) {
-                emoji = reaction.substring(7);
+              final type = reactionData['reaction_type'];
+              final customEmoji = reactionData['custom_emoji'];
+
+              if (type == 'custom' && customEmoji != null) {
+                emoji = customEmoji;
                 label = 'Custom';
+                reactionKey = 'custom_$customEmoji';
               } else {
-                final reactionData = reactionButtons.firstWhere(
-                  (r) => r['type'] == reaction,
+                final buttonData = reactionButtons.firstWhere(
+                  (r) => r['type'] == type,
                   orElse: () => {'emoji': '👍', 'label': 'Unknown'},
                 );
-                emoji = reactionData['emoji'] as String;
-                label = reactionData['label'] as String;
+                emoji = buttonData['emoji'] as String;
+                label = buttonData['label'] as String;
+                reactionKey = type;
               }
 
               return ListTile(
@@ -2715,7 +2732,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: Text(label),
                 onTap: () async {
                   Navigator.of(context).pop();
-                  await _replaceReaction(postId, reaction, newReaction,
+                  await _replaceReaction(postId, reactionKey, newReaction,
                       isCustom: isCustom);
                 },
               );
