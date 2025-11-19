@@ -259,13 +259,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
-      // Reload reactions first to get current state from database
-      await _loadReactionsForPosts();
+      // Check current reactions directly from database
+      final currentReactions = await supabase
+          .from('reactions')
+          .select('reaction_type, custom_emoji')
+          .eq('post_id', postId)
+          .eq('user_id', userId);
 
-      final userReactions = _userReactions[postId] ?? {};
+      final hasThisReaction = currentReactions.any((r) {
+        final type = r['reaction_type'];
+        return type == reactionType;
+      });
 
       // Check if user already has this reaction
-      if (userReactions.contains(reactionType)) {
+      if (hasThisReaction) {
         // Remove this specific reaction
         await supabase
             .from('reactions')
@@ -278,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await _loadReactionsForPosts();
       } else {
         // Check if user already has 2 reactions
-        if (userReactions.length >= 2) {
+        if (currentReactions.length >= 2) {
           // Ask which reaction to replace
           if (mounted) {
             await _showReplaceReactionDialog(postId, reactionType,
@@ -288,33 +295,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Add new reaction
-        try {
-          debugPrint(
-              'Attempting to insert reaction: postId=$postId, userId=$userId, reactionType=$reactionType');
-          await supabase.from('reactions').insert({
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': reactionType,
-            'custom_emoji': null,
-          });
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': reactionType,
+          'custom_emoji': null,
+        });
 
-          // Reload to show updated state
-          await _loadReactionsForPosts();
-        } catch (insertError) {
-          debugPrint('Insert error details: $insertError');
-          debugPrint('Insert error type: ${insertError.runtimeType}');
-          // If we get a constraint error, show the replace dialog
-          if (insertError
-              .toString()
-              .contains('can only have up to 2 reactions')) {
-            if (mounted) {
-              await _showReplaceReactionDialog(postId, reactionType,
-                  isCustom: false);
-            }
-            return;
-          }
-          rethrow;
-        }
+        // Reload to show updated state
+        await _loadReactionsForPosts();
       }
     } catch (e) {
       debugPrint('Error toggling reaction: $e');
@@ -2614,14 +2603,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (userId == null) return;
 
-      // Reload reactions first to get current state from database
-      await _loadReactionsForPosts();
+      // Check current reactions directly from database
+      final currentReactions = await supabase
+          .from('reactions')
+          .select('reaction_type, custom_emoji')
+          .eq('post_id', postId)
+          .eq('user_id', userId);
 
-      final userReactions = _userReactions[postId] ?? {};
-      final customKey = 'custom_$emoji';
+      final hasThisReaction = currentReactions.any((r) {
+        final type = r['reaction_type'];
+        final customEmoji = r['custom_emoji'];
+        return type == 'custom' && customEmoji == emoji;
+      });
 
       // Check if user already has this custom reaction
-      if (userReactions.contains(customKey)) {
+      if (hasThisReaction) {
         // Remove this specific custom reaction
         await supabase
             .from('reactions')
@@ -2635,7 +2631,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await _loadReactionsForPosts();
       } else {
         // Check if user already has 2 reactions
-        if (userReactions.length >= 2) {
+        if (currentReactions.length >= 2) {
           // Ask which reaction to replace
           if (mounted) {
             await _showReplaceReactionDialog(postId, emoji, isCustom: true);
@@ -2644,28 +2640,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Add new custom reaction
-        try {
-          await supabase.from('reactions').insert({
-            'post_id': postId,
-            'user_id': userId,
-            'reaction_type': 'custom',
-            'custom_emoji': emoji,
-          });
+        await supabase.from('reactions').insert({
+          'post_id': postId,
+          'user_id': userId,
+          'reaction_type': 'custom',
+          'custom_emoji': emoji,
+        });
 
-          // Reload to show updated state
-          await _loadReactionsForPosts();
-        } catch (insertError) {
-          // If we get a constraint error, show the replace dialog
-          if (insertError
-              .toString()
-              .contains('can only have up to 2 reactions')) {
-            if (mounted) {
-              await _showReplaceReactionDialog(postId, emoji, isCustom: true);
-            }
-            return;
-          }
-          rethrow;
-        }
+        // Reload to show updated state
+        await _loadReactionsForPosts();
       }
     } catch (e) {
       debugPrint('Error toggling custom reaction: $e');
